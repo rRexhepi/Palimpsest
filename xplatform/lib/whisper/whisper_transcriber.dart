@@ -425,8 +425,10 @@ class WhisperTranscriber {
             : chunkSeconds + overlapSeconds;
         final wavPath = '${chunkDir.path}/chunk_$i.wav';
 
+        final elapsedMin = (i * chunkSeconds / 60).toStringAsFixed(0);
+        final totalMin = (totalSeconds / 60).toStringAsFixed(0);
         yield TranscribeProgress(
-          'Transcribing chunk ${i + 1} of $chunkCount…',
+          'Transcribing… $elapsedMin / $totalMin min',
           fraction: i / chunkCount,
         );
 
