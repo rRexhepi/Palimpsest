@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -373,16 +372,3 @@ List<AudioWord> _tokensToWords({
   ];
 }
 
-/// Sensible default for the number of parallel decoder workers.
-///   * Desktop: cap at 4 (more starts to thrash a typical 8-core laptop
-///     once each recognizer is multi-threaded internally).
-///   * Mobile: 1 (single Whisper instance is already the right size for
-///     phone CPUs, and battery is the real constraint).
-int defaultWorkerCount() {
-  if (Platform.isAndroid || Platform.isIOS) return 1;
-  final cores = Platform.numberOfProcessors;
-  if (cores <= 2) return 1;
-  if (cores <= 4) return 2;
-  if (cores <= 8) return 3;
-  return 4;
-}

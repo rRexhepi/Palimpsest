@@ -9,6 +9,7 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as so;
 
 import '../alignment/aligner.dart';
 import 'ffmpeg_runner.dart';
+import 'whisper_config.dart';
 import 'whisper_isolate.dart';
 
 class TranscribeProgress {
@@ -54,12 +55,15 @@ class WhisperTranscriber {
   WhisperWorkerPool? _pool;
   Future<WhisperWorkerPool>? _poolSpawning;
 
-  WhisperTranscriber() {
+  WhisperTranscriber({WhisperConfig? config})
+      : _config = config ?? WhisperConfig.forHost() {
     if (!_bindingsInitialized) {
       so.initBindings();
       _bindingsInitialized = true;
     }
   }
+
+  final WhisperConfig _config;
 
   Future<Directory> _modelDir() async {
     final base = await getApplicationSupportDirectory();
@@ -146,9 +150,8 @@ class WhisperTranscriber {
   /// parallel so the UI thread never sees a `decode()` call and total
   /// transcription wall-clock scales with core count.
   ///
-  /// `provider: 'nnapi'` on Android asks ONNX Runtime to dispatch to the
-  /// device NPU; on desktop we stay on CPU. The Android pool has only one
-  /// worker since the NPU is the bottleneck regardless.
+  /// CPU on every platform. NNAPI on Android trades alignment quality
+  /// for speed -- the per-platform output diverged enough to matter.
   Future<WhisperWorkerPool> _ensurePool() {
     final existing = _pool;
     if (existing != null) return Future.value(existing);
@@ -157,19 +160,13 @@ class WhisperTranscriber {
 
     final future = () async {
       final dir = await _modelDir();
-      final count = defaultWorkerCount();
-      // sherpa-onnx itself fans `decode()` out across `numThreads`; with
-      // N workers each running their own recognizer, divide threads so we
-      // don't oversubscribe the CPU. Floor at 1 thread/worker.
-      final cores = Platform.numberOfProcessors;
-      final threads = (cores ~/ count).clamp(1, 4);
       final pool = await WhisperWorkerPool.spawn(
         encoderPath: '${dir.path}/$_encoderName',
         decoderPath: '${dir.path}/$_decoderName',
         tokensPath: '${dir.path}/$_tokensName',
-        useNNAPI: Platform.isAndroid,
-        count: count,
-        numThreadsPerWorker: threads,
+        useNNAPI: _config.useNNAPI,
+        count: _config.workerCount,
+        numThreadsPerWorker: _config.threadsPerWorker,
       );
       _pool = pool;
       _poolSpawning = null;
