@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Swift Package Manager
+.build/
+Package.resolved
+.swiftpm/
+
+# Xcode
+DerivedData/
+build/
+xcuserdata/
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Logs
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Local env
+.env
+.env.local
+
+# Generated alignment caches (per-book, large)
+Caches/
+*.whisper.json

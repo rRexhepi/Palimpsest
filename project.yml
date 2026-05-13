@@ -1,0 +1,108 @@
+name: Palimpsest
+
+options:
+  bundleIdPrefix: com.rexhep
+  developmentLanguage: en
+  groupSortPosition: top
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+packages:
+  PalimpsestCore:
+    path: PalimpsestCore
+
+# Project-wide settings — applied to every target unless overridden in
+# the target's own `settings.base`. These mirror the recommendations
+# Xcode surfaces under Project → Validate Settings; baking them in
+# project.yml keeps `xcodegen generate` from reverting them.
+settings:
+  base:
+    DEAD_CODE_STRIPPING: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+
+targets:
+  PalimpsestiOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: App
+        excludes:
+          - "Info.plist"
+    dependencies:
+      - package: PalimpsestCore
+        product: PalimpsestCore
+    entitlements:
+      path: App/Palimpsest.entitlements
+      properties:
+        # App Sandbox is implicit on iOS but explicit on Catalyst — App
+        # Store rejects Catalyst uploads without it. Same set the
+        # macOS AppKit target needed.
+        com.apple.security.app-sandbox: true
+        # WhisperKit downloads its model from HuggingFace on first run.
+        com.apple.security.network.client: true
+        # File picker access for `.epub` / `.m4b` import.
+        com.apple.security.files.user-selected.read-write: true
+        # WhisperKit + CoreML may JIT-compile compute kernels.
+        com.apple.security.cs.allow-jit: true
+    info:
+      path: App/InfoiOS.plist
+      properties:
+        CFBundleDisplayName: Palimpsest
+        CFBundleShortVersionString: "0.1.1"
+        CFBundleVersion: "2"
+        LSRequiresIPhoneOS: true
+        LSApplicationCategoryType: public.app-category.education
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        UILaunchScreen:
+          UIColorName: ""
+        UIRequiredDeviceCapabilities:
+          - arm64
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIBackgroundModes:
+          - audio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rexhep.Palimpsest
+        PRODUCT_NAME: Palimpsest
+        MARKETING_VERSION: "0.1.1"
+        CURRENT_PROJECT_VERSION: "2"
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_STRICT_CONCURRENCY: complete
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIconIOS
+        # Mac Catalyst: runs the iOS target natively on macOS using
+        # UIKit-on-AppKit. Gets us iBooks-quality `UIPageViewController.pageCurl`
+        # on Mac for free — same renderer Apple Books on Mac uses. The
+        # Calibre PDF→EPUB path is no longer relevant (sandbox blocks it
+        # anyway), so the AppKit Palimpsest target's reason to exist is gone.
+        SUPPORTS_MACCATALYST: YES
+        # Same bundle ID across iOS + Catalyst so it's one product on App
+        # Store Connect, not two.
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        # Don't auto-offer "Designed for iPad" on Mac — that's a parallel
+        # ARM-Mac path we don't want shipping alongside the Catalyst build.
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+
+schemes:
+  PalimpsestiOS:
+    build:
+      targets:
+        PalimpsestiOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+    archive:
+      config: Release

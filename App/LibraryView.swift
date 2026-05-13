@@ -1,0 +1,496 @@
+import SwiftUI
+import SwiftData
+import UniformTypeIdentifiers
+import PalimpsestCore
+
+struct LibraryView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Book.addedAt, order: .reverse) private var books: [Book]
+    @State private var selectedBook: Book?
+    @State private var showingImporter = false
+    @State private var importing = false
+    @State private var importError: String?
+    @State private var showSettings = false
+    @AppStorage("palimpsest.lastOpenedBookID") private var lastOpenedBookID: String = ""
+    @AppStorage("palimpsest.hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+
+    var body: some View {
+        rootLayout
+            .background(Theme.canvas)
+            .onAppear {
+                restoreLastBookIfNeeded()
+            }
+            .onChange(of: selectedBook) { _, newValue in
+                if let book = newValue {
+                    lastOpenedBookID = book.id.uuidString
+                }
+            }
+            .fileImporter(
+                isPresented: $showingImporter,
+                allowedContentTypes: importContentTypes
+            ) { result in
+                handleImportPicker(result)
+            }
+            .alert("Import failed", isPresented: Binding(
+                get: { importError != nil },
+                set: { if !$0 { importError = nil } }
+            )) {
+                Button("OK", role: .cancel) { importError = nil }
+            } message: {
+                Text(importError ?? "")
+            }
+            #if os(iOS)
+            .fullScreenCover(isPresented: Binding(
+                get: { !hasCompletedOnboarding },
+                set: { _ in }
+            )) {
+                OnboardingView(onFinish: {
+                    hasCompletedOnboarding = true
+                    showingImporter = true
+                })
+            }
+            .sheet(isPresented: $showSettings) {
+                NavigationStack {
+                    IOSSettingsView()
+                        .navigationTitle("Settings")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") { showSettings = false }
+                            }
+                        }
+                }
+            }
+            #endif
+    }
+
+    /// On iOS we want a single-stack flow: Library → push ReaderView. On
+    /// macOS we keep the two-column NavigationSplitView since the desktop
+    /// reader chrome owns its own internal sidebar.
+    @ViewBuilder
+    private var rootLayout: some View {
+        #if os(macOS)
+        NavigationSplitView {
+            sidebar
+                .frame(minWidth: 240, idealWidth: 280)
+        } detail: {
+            if let book = selectedBook {
+                ReaderView(book: book)
+            } else {
+                emptyDetail
+            }
+        }
+        #else
+        NavigationStack {
+            iosLibraryGrid
+                .navigationTitle("Library")
+                .navigationBarTitleDisplayMode(.large)
+                .navigationDestination(item: $selectedBook) { book in
+                    ReaderView(book: book)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showingImporter = true
+                        } label: {
+                            if importing {
+                                ProgressView().controlSize(.small)
+                            } else {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                        .disabled(importing)
+                        .tint(Theme.accent)
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 16))
+                        }
+                        .tint(Theme.inkSoft)
+                    }
+                }
+        }
+        .tint(Theme.accent)
+        #endif
+    }
+
+    // MARK: - macOS sidebar
+
+    #if os(macOS)
+    private var sidebar: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    ForEach(books) { book in
+                        let isSelected = selectedBook == book
+                        BookRow(book: book)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(isSelected ? Theme.accent : Color.clear)
+                            .foregroundStyle(isSelected ? Theme.onAccent : Theme.ink)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                selectedBook = book
+                            }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteBook(book)
+                                } label: {
+                                    Label("Remove from Library", systemImage: "trash")
+                                }
+                            }
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 8)
+            }
+            .background(Theme.canvasCool)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingImporter = true
+                } label: {
+                    if importing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("Import", systemImage: "plus")
+                    }
+                }
+                .disabled(importing)
+            }
+        }
+        .navigationTitle("Library")
+        .background(Theme.canvasCool)
+    }
+    #endif
+
+    // MARK: - iOS grid
+
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var iosLibraryGrid: some View {
+        Group {
+            if books.isEmpty {
+                LibraryEmptyState(onImport: { showingImporter = true })
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: gridColumns, spacing: 28) {
+                        ForEach(books) { book in
+                            Button {
+                                selectedBook = book
+                            } label: {
+                                BookCard(book: book)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    deleteBook(book)
+                                } label: {
+                                    Label("Remove from Library", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 24)
+                }
+            }
+        }
+        .background(Theme.canvas)
+    }
+
+    private var gridColumns: [GridItem] {
+        let count = horizontalSizeClass == .regular ? 4 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 24, alignment: .top), count: count)
+    }
+    #endif
+
+    // MARK: - Empty + helpers
+
+    #if os(macOS)
+    private var emptyDetail: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 56))
+                .foregroundStyle(Theme.inkMuted)
+            Text(books.isEmpty ? "Import an ebook to get started" : "Select a book")
+                .font(.system(.title3, design: .serif))
+                .foregroundStyle(Theme.inkSoft)
+            if books.isEmpty {
+                Button {
+                    showingImporter = true
+                } label: {
+                    Label("Import .epub or .pdf", systemImage: "plus")
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                .background(Theme.accent)
+                .foregroundStyle(Theme.onAccent)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.canvas)
+    }
+    #endif
+
+    /// Both platforms accept `.epub` only. PDF→EPUB conversion was
+    /// previously a macOS-only feature via Calibre's `ebook-convert`
+    /// subprocess, but App Sandbox (required for App Store distribution)
+    /// blocks subprocess spawning. Long-term replacement: PDFKit-based
+    /// extractor (cross-platform, sandbox-safe).
+    private var importContentTypes: [UTType] {
+        [.epub]
+    }
+
+    private func handleImportPicker(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            Task { @MainActor in
+                importing = true
+                defer { importing = false }
+                do {
+                    let service = ImportService(modelContext: modelContext)
+                    let book = try await service.importBook(from: url)
+                    selectedBook = book
+                } catch {
+                    importError = error.localizedDescription
+                }
+            }
+        case .failure(let error):
+            importError = error.localizedDescription
+        }
+    }
+
+    private func deleteBook(_ book: Book) {
+        if selectedBook == book {
+            selectedBook = nil
+            lastOpenedBookID = ""
+        }
+        let service = ImportService(modelContext: modelContext)
+        try? service.deleteBook(book)
+    }
+
+    private func restoreLastBookIfNeeded() {
+        guard selectedBook == nil,
+              !lastOpenedBookID.isEmpty,
+              let uuid = UUID(uuidString: lastOpenedBookID),
+              let match = books.first(where: { $0.id == uuid }) else { return }
+        selectedBook = match
+    }
+}
+
+// MARK: - macOS list row
+
+#if os(macOS)
+private struct BookRow: View {
+    let book: Book
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CoverThumb(data: book.coverImageData)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title)
+                    .font(.system(.body, design: .serif))
+                    .lineLimit(2)
+                    .foregroundStyle(Theme.ink)
+                Text(book.author)
+                    .font(.caption)
+                    .foregroundStyle(Theme.inkMuted)
+                if book.audiobookFileURL == nil {
+                    Text("No audio")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.inkMuted)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Theme.canvasDeep)
+                        .clipShape(Capsule())
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct CoverThumb: View {
+    let data: Data?
+
+    var body: some View {
+        Group {
+            if let data, let image = Image(platformData: data) {
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Theme.canvasDeep
+                    .overlay(
+                        Image(systemName: "book.closed")
+                            .foregroundStyle(Theme.inkMuted)
+                            .font(.system(size: 16))
+                    )
+            }
+        }
+        .frame(width: 36, height: 52)
+        .clipShape(RoundedRectangle(cornerRadius: 2))
+        .overlay(
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(Theme.hairlineStrong, lineWidth: 0.5)
+        )
+    }
+}
+#endif
+
+// MARK: - iOS book card
+
+#if os(iOS)
+/// Cover-first card used in the iOS library grid. Shows a 2:3 cover
+/// rectangle (real cover if available, generated fallback otherwise),
+/// title + author beneath, and a thin reading-progress bar or "no audio"
+/// badge per the iPad mock.
+private struct BookCard: View {
+    let book: Book
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            cover
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title)
+                    .font(.system(size: 14, design: .serif))
+                    .fontWeight(.medium)
+                    .foregroundStyle(Theme.ink)
+                    .lineLimit(2)
+                Text(book.author)
+                    .font(.system(size: 11, design: .serif))
+                    .italic()
+                    .foregroundStyle(Theme.inkMuted)
+                    .lineLimit(1)
+                if book.audiobookFileURL == nil {
+                    Text("NO AUDIO")
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(0.5)
+                        .foregroundStyle(Theme.inkMuted)
+                        .padding(.top, 4)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var cover: some View {
+        if let data = book.coverImageData, let image = Image(platformData: data) {
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .aspectRatio(2.0/3.0, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
+        } else {
+            generatedCover
+        }
+    }
+
+    private var generatedCover: some View {
+        let hue = Double(abs(book.title.hashValue) % 360)
+        return GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                LinearGradient(
+                    colors: [
+                        Color(hue: hue / 360, saturation: 0.35, brightness: 0.45),
+                        Color(hue: hue / 360, saturation: 0.45, brightness: 0.30),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(book.title)
+                        .font(.system(size: 14, design: .serif))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color.white.opacity(0.95))
+                        .lineLimit(3)
+                    Spacer()
+                    Text(book.author)
+                        .font(.system(size: 9, design: .serif))
+                        .italic()
+                        .foregroundStyle(Color.white.opacity(0.75))
+                        .lineLimit(1)
+                }
+                .padding(14)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+            }
+        }
+        .aspectRatio(2.0/3.0, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
+        .shadow(color: Color.black.opacity(0.18), radius: 8, x: 0, y: 4)
+    }
+}
+
+/// Empty-library state for iOS, modeled on `Screens.html`. Ghost shelf of
+/// dashed silhouettes, headline, supporting prose, and a saddle-accent
+/// "Import a book" CTA.
+private struct LibraryEmptyState: View {
+    let onImport: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                ghostShelf
+                    .padding(.top, 60)
+                Text("Your library is quiet.")
+                    .font(.system(size: 24, design: .serif))
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Theme.ink)
+                Text("Add an ebook and its audiobook. Palimpsest will transcribe the audio on this device and align it to the text. No upload, no account.")
+                    .font(.system(size: 15, design: .serif))
+                    .foregroundStyle(Theme.inkSoft)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+                Button(action: onImport) {
+                    Text("Import a book")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.onAccent)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 12)
+                        .background(Theme.accent)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Text(".epub + .m4b")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Theme.inkMuted)
+                    .padding(.top, 4)
+                Text("about 30 min to align a typical novel")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(Theme.inkMuted)
+                Spacer(minLength: 60)
+            }
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var ghostShelf: some View {
+        HStack(spacing: 14) {
+            ForEach(0..<4, id: \.self) { i in
+                RoundedRectangle(cornerRadius: 3)
+                    .stroke(Theme.hairlineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Theme.canvasCool)
+                    )
+                    .frame(width: 70, height: 96)
+                    .opacity(0.45 + Double(i) * 0.05)
+            }
+        }
+    }
+}
+#endif
