@@ -77,6 +77,13 @@ flutter build windows
 flutter build linux
 ```
 
+## Packaging
+
+Windows: `scripts\package-windows.ps1` builds the release and produces
+`dist\palimpsest-<version>-windows-x64.exe` via Inno Setup (`winget install
+JRSoftware.InnoSetup`). Version is read from `pubspec.yaml`; override with
+`-Version 1.2.0`.
+
 ## Layout
 
 - `lib/audio/` — `PalimpsestAudioPlayer`. Mobile `audio_session` and
