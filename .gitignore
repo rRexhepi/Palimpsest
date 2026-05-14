@@ -23,6 +23,10 @@ xcuserdata/
 .vscode/
 .idea/
 
+# Project docs (local-only)
+HANDOFF.md
+TODO.md
+
 # Local env
 .env
 .env.local
