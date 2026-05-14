@@ -87,6 +87,7 @@ class CurlPageView extends StatefulWidget {
     this.springBackDuration = const Duration(milliseconds: 240),
     this.edgeTapFraction = 0.25,
     this.animationsEnabled = true,
+    this.swipeEnabled = true,
     this.pageInsets = EdgeInsets.zero,
   });
 
@@ -113,6 +114,12 @@ class CurlPageView extends StatefulWidget {
   /// drag-in-progress curl stays on either way; it's direct manipulation,
   /// not animation.
   final bool animationsEnabled;
+
+  /// When false, horizontal drag never triggers the curl — page turns
+  /// happen only via edge taps, keyboard, or `controller.animateToPage`.
+  /// Lets desktop users drag-select text without fighting the page
+  /// gesture. The animated curl still plays on every other trigger.
+  final bool swipeEnabled;
 
   /// Leaf-bounds to card-bounds insets. The shader uses these so the
   /// curling rectangle matches the resting card.
@@ -571,9 +578,9 @@ class _CurlPageViewState extends State<CurlPageView>
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: _onDragStart,
-          onHorizontalDragUpdate: _onDragUpdate,
-          onHorizontalDragEnd: _onDragEnd,
+          onHorizontalDragStart: widget.swipeEnabled ? _onDragStart : null,
+          onHorizontalDragUpdate: widget.swipeEnabled ? _onDragUpdate : null,
+          onHorizontalDragEnd: widget.swipeEnabled ? _onDragEnd : null,
           onTapUp: _onTapUp,
           child: Stack(
             fit: StackFit.expand,

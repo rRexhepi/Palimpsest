@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
+import '../annotations/annotation_types.dart';
 import '../main.dart' show AppThemeChoice;
 import '../theme.dart';
 import '../widgets/app_header.dart';
@@ -11,6 +14,10 @@ class SettingsScreen extends StatelessWidget {
   final ValueChanged<AppThemeChoice> onThemeChanged;
   final bool animationsEnabled;
   final ValueChanged<bool> onAnimationsChanged;
+  final HighlightColor defaultHighlightColor;
+  final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
+  final bool swipeToFlipEnabled;
+  final ValueChanged<bool> onSwipeToFlipChanged;
 
   const SettingsScreen({
     super.key,
@@ -18,6 +25,10 @@ class SettingsScreen extends StatelessWidget {
     required this.onThemeChanged,
     required this.animationsEnabled,
     required this.onAnimationsChanged,
+    required this.defaultHighlightColor,
+    required this.onDefaultHighlightColorChanged,
+    required this.swipeToFlipEnabled,
+    required this.onSwipeToFlipChanged,
   });
 
   static String _themeLabel(AppThemeChoice c) {
@@ -34,6 +45,8 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     return AppScaffold(
       header: AppHeader(
         title: 'Settings',
@@ -75,6 +88,27 @@ class SettingsScreen extends StatelessWidget {
             value: animationsEnabled,
             onChanged: onAnimationsChanged,
           ),
+          if (isDesktop)
+            AppSwitchTile(
+              title: const Text('Swipe to turn page'),
+              subtitle: const Text(
+                  'Off by default on desktop so text selection works. '
+                  'Edge taps and arrow keys still flip the page.'),
+              value: swipeToFlipEnabled,
+              onChanged: onSwipeToFlipChanged,
+            ),
+          AppListTile(
+            title: const Text('Default highlight color'),
+            subtitle: Text(
+              'Used when you highlight from the text-selection menu.',
+              style: TextStyle(color: colors.inkMuted),
+            ),
+            trailing: _HighlightSwatchRow(
+              selected: defaultHighlightColor,
+              onChanged: onDefaultHighlightColorChanged,
+              colors: colors,
+            ),
+          ),
           const SizedBox(height: 8),
           const AppSectionHeader('About'),
           const AppListTile(
@@ -84,6 +118,46 @@ class SettingsScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HighlightSwatchRow extends StatelessWidget {
+  final HighlightColor selected;
+  final ValueChanged<HighlightColor> onChanged;
+  final PalimpsestColors colors;
+
+  const _HighlightSwatchRow({
+    required this.selected,
+    required this.onChanged,
+    required this.colors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final c in HighlightColor.values)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: () => onChanged(c),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: c.swatch,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: c == selected ? colors.ink : colors.hairline,
+                    width: c == selected ? 2 : 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

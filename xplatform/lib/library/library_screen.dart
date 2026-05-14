@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../annotations/annotation_types.dart';
 import '../main.dart' show AppThemeChoice;
 import '../persistence/library_storage.dart';
 import '../platform/form_factor.dart';
@@ -22,6 +23,10 @@ class LibraryScreen extends StatefulWidget {
   final ValueChanged<AppThemeChoice> onThemeChanged;
   final bool animationsEnabled;
   final ValueChanged<bool> onAnimationsChanged;
+  final HighlightColor defaultHighlightColor;
+  final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
+  final bool swipeToFlipEnabled;
+  final ValueChanged<bool> onSwipeToFlipChanged;
   final ValueChanged<String?> onOpenBook;
 
   const LibraryScreen({
@@ -31,6 +36,10 @@ class LibraryScreen extends StatefulWidget {
     required this.onThemeChanged,
     required this.animationsEnabled,
     required this.onAnimationsChanged,
+    required this.defaultHighlightColor,
+    required this.onDefaultHighlightColorChanged,
+    required this.swipeToFlipEnabled,
+    required this.onSwipeToFlipChanged,
     required this.onOpenBook,
   });
 
@@ -84,6 +93,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         store: widget.store,
         book: book,
         animationsEnabled: widget.animationsEnabled,
+        defaultHighlightColor: widget.defaultHighlightColor,
+        swipeToFlipEnabled: widget.swipeToFlipEnabled,
         onOpened: widget.onOpenBook,
       ),
     ));
@@ -108,6 +119,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
         onThemeChanged: widget.onThemeChanged,
         animationsEnabled: widget.animationsEnabled,
         onAnimationsChanged: widget.onAnimationsChanged,
+        defaultHighlightColor: widget.defaultHighlightColor,
+        onDefaultHighlightColorChanged: widget.onDefaultHighlightColorChanged,
+        swipeToFlipEnabled: widget.swipeToFlipEnabled,
+        onSwipeToFlipChanged: widget.onSwipeToFlipChanged,
       ),
     ));
   }

@@ -5,6 +5,7 @@ import 'package:just_audio_background/just_audio_background.dart';
 import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'annotations/annotation_types.dart';
 import 'library/library_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'reader/reader_screen.dart';
@@ -15,6 +16,8 @@ const _kThemePref = 'palimpsest.theme';
 const _kLastBookPref = 'palimpsest.lastOpenedBookID';
 const _kOnboardedPref = 'palimpsest.hasCompletedOnboarding';
 const _kAnimationsPref = 'palimpsest.animationsEnabled';
+const _kHighlightColorPref = 'palimpsest.defaultHighlightColor';
+const _kSwipeToFlipPref = 'palimpsest.swipeToFlipEnabled';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,6 +51,8 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
   bool _bootstrapped = false;
   bool _onboarded = true;
   bool _animationsEnabled = true;
+  HighlightColor _defaultHighlightColor = HighlightColor.amber;
+  bool _swipeToFlipEnabled = true;
   String? _lastBookId;
 
   @override
@@ -69,6 +74,15 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
     _lastBookId = prefs?.getString(_kLastBookPref);
     _onboarded = prefs?.getBool(_kOnboardedPref) ?? false;
     _animationsEnabled = prefs?.getBool(_kAnimationsPref) ?? true;
+    final hcRaw = prefs?.getString(_kHighlightColorPref);
+    _defaultHighlightColor = HighlightColor.values
+            .where((c) => c.name == hcRaw)
+            .firstOrNull ??
+        HighlightColor.amber;
+    // Default OFF on desktop so the gesture stops intercepting drag-
+    // selection; ON elsewhere where swipe is the natural navigation.
+    final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+    _swipeToFlipEnabled = prefs?.getBool(_kSwipeToFlipPref) ?? !isDesktop;
     setState(() {
       _theme = choice;
       _bootstrapped = true;
@@ -86,6 +100,18 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
     setState(() => _animationsEnabled = enabled);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kAnimationsPref, enabled);
+  }
+
+  Future<void> setDefaultHighlightColor(HighlightColor color) async {
+    setState(() => _defaultHighlightColor = color);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kHighlightColorPref, color.name);
+  }
+
+  Future<void> setSwipeToFlipEnabled(bool enabled) async {
+    setState(() => _swipeToFlipEnabled = enabled);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kSwipeToFlipPref, enabled);
   }
 
   Future<void> rememberLastBook(String? id) async {
@@ -143,6 +169,10 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
                   onThemeChanged: setTheme,
                   animationsEnabled: _animationsEnabled,
                   onAnimationsChanged: setAnimationsEnabled,
+                  defaultHighlightColor: _defaultHighlightColor,
+                  onDefaultHighlightColorChanged: setDefaultHighlightColor,
+                  swipeToFlipEnabled: _swipeToFlipEnabled,
+                  onSwipeToFlipChanged: setSwipeToFlipEnabled,
                   onOpenBook: rememberLastBook,
                 ),
     );
@@ -156,6 +186,10 @@ class _Boot extends StatefulWidget {
   final ValueChanged<AppThemeChoice> onThemeChanged;
   final bool animationsEnabled;
   final ValueChanged<bool> onAnimationsChanged;
+  final HighlightColor defaultHighlightColor;
+  final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
+  final bool swipeToFlipEnabled;
+  final ValueChanged<bool> onSwipeToFlipChanged;
   final ValueChanged<String?> onOpenBook;
 
   const _Boot({
@@ -165,6 +199,10 @@ class _Boot extends StatefulWidget {
     required this.onThemeChanged,
     required this.animationsEnabled,
     required this.onAnimationsChanged,
+    required this.defaultHighlightColor,
+    required this.onDefaultHighlightColorChanged,
+    required this.swipeToFlipEnabled,
+    required this.onSwipeToFlipChanged,
     required this.onOpenBook,
   });
 
@@ -197,6 +235,8 @@ class _BootState extends State<_Boot> {
                   store: widget.store,
                   book: book,
                   animationsEnabled: widget.animationsEnabled,
+                  defaultHighlightColor: widget.defaultHighlightColor,
+                  swipeToFlipEnabled: widget.swipeToFlipEnabled,
                   onOpened: widget.onOpenBook,
                 ),
               ));
@@ -209,6 +249,10 @@ class _BootState extends State<_Boot> {
           onThemeChanged: widget.onThemeChanged,
           animationsEnabled: widget.animationsEnabled,
           onAnimationsChanged: widget.onAnimationsChanged,
+          defaultHighlightColor: widget.defaultHighlightColor,
+          onDefaultHighlightColorChanged: widget.onDefaultHighlightColorChanged,
+          swipeToFlipEnabled: widget.swipeToFlipEnabled,
+          onSwipeToFlipChanged: widget.onSwipeToFlipChanged,
           onOpenBook: widget.onOpenBook,
         );
       },

@@ -64,12 +64,16 @@ class ReaderScreen extends StatefulWidget {
   final LibraryStore store;
   final StoredBook book;
   final bool animationsEnabled;
+  final HighlightColor defaultHighlightColor;
+  final bool swipeToFlipEnabled;
   final ValueChanged<String?>? onOpened;
   const ReaderScreen({
     super.key,
     required this.store,
     required this.book,
     this.animationsEnabled = true,
+    this.defaultHighlightColor = HighlightColor.amber,
+    this.swipeToFlipEnabled = true,
     this.onOpened,
   });
 
@@ -641,7 +645,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           segmentId: segId,
           paragraphIndex: absoluteIdx,
           kind: AnnotationKind.highlight,
-          color: HighlightColor.amber,
+          color: widget.defaultHighlightColor,
           quote: quote,
           quoteStart: start,
           quoteEnd: end,
@@ -656,7 +660,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             segmentId: segId,
             paragraphIndex: absoluteIdx,
             kind: AnnotationKind.note,
-            color: HighlightColor.amber,
+            color: widget.defaultHighlightColor,
             quote: quote,
             quoteStart: start,
             quoteEnd: end,
@@ -887,6 +891,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
       pageCount: _flatIndex.length,
       spread: spread,
       animationsEnabled: widget.animationsEnabled,
+      swipeEnabled: widget.swipeToFlipEnabled,
       pageInsets: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       onPageChanged: _onPageChanged,
       onMiddleTap: () => setState(() => _chromeShown = !_chromeShown),
