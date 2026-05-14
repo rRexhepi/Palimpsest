@@ -99,6 +99,15 @@ class WhisperTranscriber {
     final dir = await _modelDir();
     final files = const [_encoderName, _decoderName, _tokensName];
 
+    // Windows: Dart's HttpClient uses BoringSSL with bundled roots and
+    // rejects certs that Schannel (and curl.exe) would accept — most
+    // visibly when an AV is inspecting TLS. Shell out to curl.exe so
+    // verification uses the Windows certificate store instead.
+    if (Platform.isWindows) {
+      yield* _downloadModelViaCurl(dir, files);
+      return;
+    }
+
     // First pass: HEAD each URL to get total bytes so the fraction below
     // is meaningful. If a HEAD fails we still proceed; the bar just runs
     // indeterminate until that file finishes.
@@ -143,6 +152,76 @@ class WhisperTranscriber {
     } finally {
       client.close(force: false);
     }
+  }
+
+  Stream<TranscribeProgress> _downloadModelViaCurl(
+    Directory dir,
+    List<String> files,
+  ) async* {
+    final sizes = <String, int>{};
+    var totalBytes = 0;
+    for (final name in files) {
+      final r = await Process.run(
+        'curl.exe',
+        ['-sIL', '--max-time', '30', '$_huggingFaceRoot/$name'],
+      );
+      final len = _parseContentLength(r.stdout.toString());
+      if (len > 0) {
+        sizes[name] = len;
+        totalBytes += len;
+      }
+    }
+
+    var written = 0;
+    for (final name in files) {
+      final dest = File('${dir.path}/$name');
+      final tmp = File('${dest.path}.part');
+      if (tmp.existsSync()) await tmp.delete();
+
+      final base = written;
+      final process = await Process.start(
+        'curl.exe',
+        ['-fL', '-s', '-o', tmp.path, '$_huggingFaceRoot/$name'],
+      );
+      final stderrBuf = StringBuffer();
+      process.stderr.transform(utf8.decoder).listen(stderrBuf.write);
+      final exitFuture = process.exitCode;
+      var done = false;
+      // ignore: unawaited_futures
+      exitFuture.whenComplete(() => done = true);
+
+      while (!done) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+        if (tmp.existsSync() && totalBytes > 0) {
+          final cur = base + tmp.lengthSync();
+          yield TranscribeProgress(
+            'Downloading model… '
+            '${(cur / 1024 / 1024).toStringAsFixed(0)} MB',
+            fraction: (cur / totalBytes).clamp(0.0, 1.0),
+          );
+        }
+      }
+
+      final code = await exitFuture;
+      if (code != 0) {
+        throw Exception(
+          'curl failed for $name (exit $code): ${stderrBuf.toString().trim()}',
+        );
+      }
+      written = base + (sizes[name] ?? (tmp.existsSync() ? tmp.lengthSync() : 0));
+      await tmp.rename(dest.path);
+    }
+
+    yield const TranscribeProgress('Model ready.', fraction: 1.0);
+  }
+
+  static int _parseContentLength(String headers) {
+    final re = RegExp(r'^content-length:\s*(\d+)', caseSensitive: false);
+    for (final line in const LineSplitter().convert(headers)) {
+      final m = re.firstMatch(line);
+      if (m != null) return int.parse(m.group(1)!);
+    }
+    return 0;
   }
 
   /// Lazily spin up the worker isolate pool. Each worker holds its own
