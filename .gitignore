@@ -34,3 +34,8 @@ TODO.md
 # Generated alignment caches (per-book, large)
 Caches/
 *.whisper.json
+
+# Android release signing (keystore + credentials; never commit)
+xplatform/android/key.properties
+*.jks
+*.keystore
