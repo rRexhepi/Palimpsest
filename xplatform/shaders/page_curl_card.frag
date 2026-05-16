@@ -24,14 +24,18 @@
 #include <flutter/runtime_effect.glsl>
 
 uniform vec2 resolution;
-uniform float pointer;
-uniform float origin;
+uniform vec2 pointer;         // .y unused; layout shared with paper shader
+uniform vec2 origin;
 uniform vec4 container;       // flipping leaf rect in viewport coords
 uniform float cornerRadius;   // (unused for now)
 uniform float direction;      // 0.0 = forward, 1.0 = backward
 uniform vec4 backColor;       // fallback parchment when no back texture
 uniform float hasBack;        // 1.0 → sample backImage on the back face,
                               // 0.0 → fall back to backColor parchment.
+uniform float flipSnapshot;   // 1.0 on Impeller (Android) where
+                              // `toImageSync` returns a bottom-left V
+                              // snapshot; 0.0 on Skia desktop where it
+                              // lands top-left.
 uniform sampler2D image;      // current page (= leaf's front)
 uniform sampler2D backImage;  // page on the back of the curling leaf
 
@@ -46,6 +50,10 @@ vec2 sampleUVIn(vec2 p, vec4 rect) {
     );
 }
 
+vec4 sampleSnapshot(sampler2D s, vec2 uv) {
+    return texture(s, vec2(uv.x, mix(uv.y, 1.0 - uv.y, flipSnapshot)));
+}
+
 out vec4 fragColor;
 
 void main() {
@@ -53,7 +61,7 @@ void main() {
     fragColor = TRANSPARENT;
 
     bool forward = direction < 0.5;
-    float dx = forward ? (origin - pointer) : (pointer - origin);
+    float dx = forward ? (origin.x - pointer.x) : (pointer.x - origin.x);
     float pageWidth = max(container.z - container.x, 1.0);
     float progress = clamp(dx / pageWidth, 0.0, 2.0);
 
@@ -104,7 +112,7 @@ void main() {
             if (hasBack > 0.5) {
                 vec2 uv = sampleUVIn(vec2(pPaper, xy.y), container);
                 uv.x = 1.0 - uv.x;
-                fragColor = texture(backImage, uv);
+                fragColor = sampleSnapshot(backImage, uv);
             } else {
                 fragColor = backColor;
             }
@@ -113,7 +121,7 @@ void main() {
             fragColor.rgb *= light;
         } else {
             // Front face — sample page N at pPaper directly.
-            fragColor = texture(image, sampleUVIn(vec2(pPaper, xy.y), container));
+            fragColor = sampleSnapshot(image, sampleUVIn(vec2(pPaper, xy.y), container));
             // Slight darkening as the page tilts up.
             float light = mix(1.0, 0.9, s);
             fragColor.rgb *= light;
