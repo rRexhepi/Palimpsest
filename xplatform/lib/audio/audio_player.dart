@@ -8,6 +8,14 @@ import 'package:just_audio_background/just_audio_background.dart';
 
 bool get _isMobile => Platform.isAndroid || Platform.isIOS;
 
+/// `h:mm:ss` when ≥ 1 h, `mm:ss` otherwise.
+String formatDuration(Duration d) {
+  final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+  final h = d.inHours;
+  return h > 0 ? '$h:$m:$s' : '$m:$s';
+}
+
 /// Thin wrapper around just_audio that surfaces only what the reader needs:
 /// load file, play/pause, ±15 s skip, rate (with pitch preserved), position
 /// stream, total duration. Mirrors the surface of `AudioEngine.swift` from

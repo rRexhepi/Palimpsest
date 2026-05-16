@@ -153,44 +153,47 @@ class LibraryStore extends ChangeNotifier {
     final ext = audio.path.split('.').last;
     final dest = File('${dir.path}/audiobook.$ext');
 
-    // Replace path: drop every prior `audiobook.*` file (the new pick may
-    // have a different extension) and the alignment JSON it was computed
-    // against. Without this, swapping in a different audiobook would leave
-    // a stale alignment.json that the next reader open would happily
-    // reload — wrong word timestamps, paragraphs jumping to the wrong
-    // audio position.
-    for (final entity in dir.listSync()) {
-      if (entity is File) {
-        final name = entity.uri.pathSegments.last;
-        if (name.startsWith('audiobook.') || name == 'alignment.json') {
-          try {
-            entity.deleteSync();
-          } catch (_) {}
-        }
-      }
-    }
-
+    _clearStaleAudioArtifacts(dir);
     await audio.copy(dest.path);
 
-    // copyWith can't set alignmentPath back to null (its `?? this.x` keeps
-    // the old value when you pass null), so build the StoredBook directly
-    // for the cleared-alignment fields.
-    final updated = StoredBook(
-      id: book.id,
-      title: book.title,
-      author: book.author,
-      segments: book.segments,
-      coverPath: book.coverPath,
-      audioPath: dest.path,
-      alignmentPath: null,
-      addedAt: book.addedAt,
-      currentSegmentIndex: book.currentSegmentIndex,
-      currentPageInChapter: book.currentPageInChapter,
-      currentAudioSeconds: book.currentAudioSeconds,
-    );
+    final updated = _withReplacedAudio(book, audioPath: dest.path);
     await _replace(updated);
     return updated;
   }
+
+  /// Drops every prior `audiobook.*` file (the new pick may have a different
+  /// extension) and the alignment JSON it was computed against. Without this,
+  /// swapping in a different audiobook would leave a stale alignment.json
+  /// that the next reader open would happily reload — wrong word timestamps,
+  /// paragraphs jumping to the wrong audio position.
+  void _clearStaleAudioArtifacts(Directory dir) {
+    for (final entity in dir.listSync()) {
+      if (entity is! File) continue;
+      final name = entity.uri.pathSegments.last;
+      if (name.startsWith('audiobook.') || name == 'alignment.json') {
+        try {
+          entity.deleteSync();
+        } catch (_) {}
+      }
+    }
+  }
+
+  /// `copyWith` can't set `alignmentPath` back to null (its `?? this.x`
+  /// keeps the old value when you pass null), so we build directly.
+  StoredBook _withReplacedAudio(StoredBook book, {required String audioPath}) =>
+      StoredBook(
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        segments: book.segments,
+        coverPath: book.coverPath,
+        audioPath: audioPath,
+        alignmentPath: null,
+        addedAt: book.addedAt,
+        currentSegmentIndex: book.currentSegmentIndex,
+        currentPageInChapter: book.currentPageInChapter,
+        currentAudioSeconds: book.currentAudioSeconds,
+      );
 
   Future<AlignmentMap?> loadAlignment(StoredBook book) =>
       storage.loadAlignment(book);

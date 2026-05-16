@@ -53,24 +53,44 @@ class EPUBImporter implements EBookImporter {
 
     final containerXml = _extractText(archive, 'META-INF/container.xml');
     final opfPath = _parseContainer(containerXml);
-
-    final opfXml = _extractText(archive, opfPath);
-    final opf = _parseOPF(opfXml);
-
+    final opf = _parseOPF(_extractText(archive, opfPath));
     final opfDir = _dirname(opfPath);
 
-    var tocEntries = const <_TocEntry>[];
+    final tocEntries = _loadToc(archive, opf, opfDir);
+    final segments = _buildSegments(archive, opf, opfDir, tocEntries);
+    final cover = _extractCover(archive, opf, opfDir);
+
+    return ImportedBook(
+      title: opf.title,
+      author: opf.author,
+      coverImageData: cover,
+      segments: segments,
+    );
+  }
+
+  List<_TocEntry> _loadToc(Archive archive, _OPFData opf, String opfDir) {
     if (opf.navHref != null) {
       final navPath = _resolvePath(opf.navHref!, opfDir);
       final xhtml = _extractTextOrNull(archive, navPath);
-      if (xhtml != null) tocEntries = _parseNavTOC(xhtml);
+      if (xhtml != null) {
+        final entries = _parseNavTOC(xhtml);
+        if (entries.isNotEmpty) return entries;
+      }
     }
-    if (tocEntries.isEmpty && opf.ncxHref != null) {
+    if (opf.ncxHref != null) {
       final ncxPath = _resolvePath(opf.ncxHref!, opfDir);
       final xml = _extractTextOrNull(archive, ncxPath);
-      if (xml != null) tocEntries = _parseNCXTOC(xml);
+      if (xml != null) return _parseNCXTOC(xml);
     }
+    return const [];
+  }
 
+  List<TextSegment> _buildSegments(
+    Archive archive,
+    _OPFData opf,
+    String opfDir,
+    List<_TocEntry> tocEntries,
+  ) {
     final segments = <TextSegment>[];
     for (final itemref in opf.spine) {
       final item = opf.manifest[itemref];
@@ -86,22 +106,15 @@ class EPUBImporter implements EBookImporter {
         tocEntries: tocEntries,
       );
     }
+    return segments;
+  }
 
-    Uint8List? cover;
-    if (opf.coverID != null) {
-      final item = opf.manifest[opf.coverID];
-      if (item != null) {
-        final path = _resolvePath(item.href, opfDir);
-        cover = _extractDataOrNull(archive, path);
-      }
-    }
-
-    return ImportedBook(
-      title: opf.title,
-      author: opf.author,
-      coverImageData: cover,
-      segments: segments,
-    );
+  Uint8List? _extractCover(Archive archive, _OPFData opf, String opfDir) {
+    if (opf.coverID == null) return null;
+    final item = opf.manifest[opf.coverID];
+    if (item == null) return null;
+    final path = _resolvePath(item.href, opfDir);
+    return _extractDataOrNull(archive, path);
   }
 }
 

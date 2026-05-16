@@ -121,13 +121,6 @@ class _CompactAudioBar extends StatelessWidget {
     required this.colors,
   });
 
-  static String _fmt(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final h = d.inHours;
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -160,7 +153,7 @@ class _CompactAudioBar extends StatelessWidget {
                 children: [
                   _MiniPlayBtn(player: player, colors: colors),
                   const SizedBox(width: 10),
-                  Text(_fmt(player.position),
+                  Text(formatDuration(player.position),
                       style: _mono(colors.inkMuted)),
                   const SizedBox(width: 8),
                   Expanded(
@@ -187,7 +180,7 @@ class _CompactAudioBar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text(_fmt(player.duration ?? Duration.zero),
+                  Text(formatDuration(player.duration ?? Duration.zero),
                       style: _mono(colors.inkMuted)),
                 ],
               ),
@@ -256,13 +249,6 @@ class _TabletAudioFooter extends StatelessWidget {
     required this.onReplaceAudio,
     required this.colors,
   });
-
-  static String _fmt(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final h = d.inHours;
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +341,7 @@ class _TabletAudioFooter extends StatelessWidget {
                     : null,
               ),
               const SizedBox(width: 12),
-              Text(_fmt(player.position),
+              Text(formatDuration(player.position),
                   style: _mono(colors.inkMuted)),
               const SizedBox(width: 8),
               Expanded(
@@ -382,7 +368,7 @@ class _TabletAudioFooter extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(_fmt(player.duration ?? Duration.zero),
+              Text(formatDuration(player.duration ?? Duration.zero),
                   style: _mono(colors.inkMuted)),
               const SizedBox(width: 12),
               _FooterRatePill(player: player, colors: colors),

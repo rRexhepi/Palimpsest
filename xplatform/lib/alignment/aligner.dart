@@ -56,57 +56,20 @@ class Aligner {
     required List<AudioWord> audio,
     required List<TextSegment> segments,
   }) {
-    final bookWords = <_BookWord>[];
-    for (final seg in segments) {
-      final tokens = _tokenizeWords(seg.text);
-      for (var idx = 0; idx < tokens.length; idx++) {
-        final norm = _normalizeWord(tokens[idx]);
-        if (norm.isEmpty) continue;
-        bookWords.add(_BookWord(seg.id, idx, norm));
-      }
-    }
+    final bookWords = _buildBookWords(segments);
     if (bookWords.isEmpty || audio.isEmpty) return _empty();
 
-    final normalizedAudio = audio
-        .map((w) => AudioWord(
-              text: _normalizeWord(w.text),
-              startSeconds: w.startSeconds,
-              endSeconds: w.endSeconds,
-              confidence: w.confidence,
-            ))
-        .toList(growable: false);
+    final normalizedAudio = _normalizeAudio(audio);
+    final (bookFreq, audioFreq) =
+        _buildFrequencyMaps(bookWords, normalizedAudio);
 
-    final bookFreq = <String, int>{};
-    for (final w in bookWords) {
-      bookFreq[w.normalized] = (bookFreq[w.normalized] ?? 0) + 1;
-    }
-    final audioFreq = <String, int>{};
-    for (final w in normalizedAudio) {
-      audioFreq[w.text] = (audioFreq[w.text] ?? 0) + 1;
-    }
-
-    final anchors = _findAnchorPairs(bookWords, normalizedAudio, bookFreq, audioFreq);
+    final anchors =
+        _findAnchorPairs(bookWords, normalizedAudio, bookFreq, audioFreq);
     if (anchors.isEmpty) return _empty();
 
     final validated = _filterDriftedAnchors(anchors);
-
-    final wordAnchors = <WordAnchor>[];
-    for (final p in validated) {
-      if (p.audioIdx >= normalizedAudio.length || p.bookIdx >= bookWords.length) {
-        continue;
-      }
-      final bw = bookWords[p.bookIdx];
-      final aw = normalizedAudio[p.audioIdx];
-      wordAnchors.add(WordAnchor(
-        segmentId: bw.segmentId,
-        wordIndex: bw.indexInSegment,
-        startSeconds: aw.startSeconds,
-        endSeconds: aw.endSeconds,
-        audioIndex: p.audioIdx,
-        confidence: aw.confidence,
-      ));
-    }
-
+    final wordAnchors =
+        _buildWordAnchors(validated, bookWords, normalizedAudio);
     final sentences = _deriveSentenceAnchors(wordAnchors, segments);
     final audioWordStarts =
         normalizedAudio.map((w) => w.startSeconds).toList(growable: false);
@@ -118,6 +81,68 @@ class Aligner {
       createdAt: DateTime.now().toUtc(),
       modelIdentifier: modelIdentifier,
     );
+  }
+
+  List<_BookWord> _buildBookWords(List<TextSegment> segments) {
+    final out = <_BookWord>[];
+    for (final seg in segments) {
+      final tokens = _tokenizeWords(seg.text);
+      for (var idx = 0; idx < tokens.length; idx++) {
+        final norm = _normalizeWord(tokens[idx]);
+        if (norm.isEmpty) continue;
+        out.add(_BookWord(seg.id, idx, norm));
+      }
+    }
+    return out;
+  }
+
+  List<AudioWord> _normalizeAudio(List<AudioWord> audio) => audio
+      .map((w) => AudioWord(
+            text: _normalizeWord(w.text),
+            startSeconds: w.startSeconds,
+            endSeconds: w.endSeconds,
+            confidence: w.confidence,
+          ))
+      .toList(growable: false);
+
+  (Map<String, int>, Map<String, int>) _buildFrequencyMaps(
+    List<_BookWord> bookWords,
+    List<AudioWord> normalizedAudio,
+  ) {
+    final bookFreq = <String, int>{};
+    for (final w in bookWords) {
+      bookFreq[w.normalized] = (bookFreq[w.normalized] ?? 0) + 1;
+    }
+    final audioFreq = <String, int>{};
+    for (final w in normalizedAudio) {
+      audioFreq[w.text] = (audioFreq[w.text] ?? 0) + 1;
+    }
+    return (bookFreq, audioFreq);
+  }
+
+  List<WordAnchor> _buildWordAnchors(
+    List<_AnchorPair> validated,
+    List<_BookWord> bookWords,
+    List<AudioWord> normalizedAudio,
+  ) {
+    final out = <WordAnchor>[];
+    for (final p in validated) {
+      if (p.audioIdx >= normalizedAudio.length ||
+          p.bookIdx >= bookWords.length) {
+        continue;
+      }
+      final bw = bookWords[p.bookIdx];
+      final aw = normalizedAudio[p.audioIdx];
+      out.add(WordAnchor(
+        segmentId: bw.segmentId,
+        wordIndex: bw.indexInSegment,
+        startSeconds: aw.startSeconds,
+        endSeconds: aw.endSeconds,
+        audioIndex: p.audioIdx,
+        confidence: aw.confidence,
+      ));
+    }
+    return out;
   }
 
   AlignmentMap _empty() => AlignmentMap(

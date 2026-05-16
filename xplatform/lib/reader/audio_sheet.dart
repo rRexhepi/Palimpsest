@@ -22,13 +22,6 @@ class AudioSheet extends StatelessWidget {
     required this.onAlign,
   });
 
-  static String _fmt(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    final h = d.inHours;
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
@@ -104,8 +97,8 @@ class AudioSheet extends StatelessWidget {
                       mainAxisAlignment:
                           MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_fmt(pos), style: _mono(colors.inkMuted)),
-                        Text('-${_fmt(dur - pos > Duration.zero ? dur - pos : Duration.zero)}',
+                        Text(formatDuration(pos), style: _mono(colors.inkMuted)),
+                        Text('-${formatDuration(dur - pos > Duration.zero ? dur - pos : Duration.zero)}',
                             style: _mono(colors.inkMuted)),
                       ],
                     ),

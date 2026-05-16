@@ -285,8 +285,8 @@ class WhisperTranscriber {
   /// Dart slices the byte stream into overlap-aware chunks and feeds the
   /// recognizer's `acceptWaveform` directly.
   ///
-  /// Mobile keeps a per-chunk ffmpeg invocation because `ffmpeg_kit`
-  /// doesn't expose a live pipe, but uses the same overlap + dedup.
+  /// Mobile keeps a per-chunk decode (MediaCodec on Android, no live PCM
+  /// pipe), but uses the same overlap + dedup.
   Stream<TranscribeProgress> transcribeChunked(
     File audio, {
     int chunkSeconds = 28,
@@ -409,22 +409,14 @@ class WhisperTranscriber {
           // (and a fresh word list) as each one settles in submission
           // order so the aligner sees deterministic input.
           while (pending.length > maxInFlight) {
-            final oldest = pending.removeAt(0);
-            final words = await oldest.future;
-            _appendWithOverlapDedup(
-              allWords,
-              words,
-              chunkStartTime: oldest.chunkStartTime,
-              overlapEndGlobalTime: oldest.overlapEndGlobalTime,
-              isFirstChunk: oldest.isFirstChunk,
-            );
-            yield TranscribeProgress(
-              'Transcribing… '
-              '${(oldest.chunkStartTime / 60).toStringAsFixed(0)}'
-              ' / ${(totalSeconds / 60).toStringAsFixed(0)} min',
-              fraction: totalSeconds > 0
-                  ? (oldest.chunkStartTime + chunkSeconds) / totalSeconds
-                  : null,
+            final c = await _drainOldestPending(pending, allWords);
+            yield _progressFor(
+              c,
+              label: 'Transcribing… '
+                  '${(c.chunkStartTime / 60).toStringAsFixed(0)}'
+                  ' / ${(totalSeconds / 60).toStringAsFixed(0)} min',
+              totalSeconds: totalSeconds,
+              chunkSeconds: chunkSeconds,
             );
           }
         }
@@ -435,22 +427,13 @@ class WhisperTranscriber {
         dispatchChunk(tail, isLast: true);
       }
 
-      // Drain the rest in submission order.
       while (pending.isNotEmpty) {
-        final next = pending.removeAt(0);
-        final words = await next.future;
-        _appendWithOverlapDedup(
-          allWords,
-          words,
-          chunkStartTime: next.chunkStartTime,
-          overlapEndGlobalTime: next.overlapEndGlobalTime,
-          isFirstChunk: next.isFirstChunk,
-        );
-        yield TranscribeProgress(
-          'Transcribing final chunks…',
-          fraction: totalSeconds > 0
-              ? (next.chunkStartTime + chunkSeconds) / totalSeconds
-              : null,
+        final c = await _drainOldestPending(pending, allWords);
+        yield _progressFor(
+          c,
+          label: 'Transcribing final chunks…',
+          totalSeconds: totalSeconds,
+          chunkSeconds: chunkSeconds,
         );
       }
 
@@ -476,8 +459,37 @@ class WhisperTranscriber {
     }
   }
 
-  /// Mobile path: per-chunk ffmpeg invocation (live PCM pipe isn't a thing
-  /// in ffmpeg_kit). Adds overlap + dedup to match the desktop path.
+  Future<_PendingChunk> _drainOldestPending(
+    List<_PendingChunk> pending,
+    List<AudioWord> allWords,
+  ) async {
+    final c = pending.removeAt(0);
+    final words = await c.future;
+    _appendWithOverlapDedup(
+      allWords,
+      words,
+      chunkStartTime: c.chunkStartTime,
+      overlapEndGlobalTime: c.overlapEndGlobalTime,
+      isFirstChunk: c.isFirstChunk,
+    );
+    return c;
+  }
+
+  TranscribeProgress _progressFor(
+    _PendingChunk c, {
+    required String label,
+    required double totalSeconds,
+    required int chunkSeconds,
+  }) =>
+      TranscribeProgress(
+        label,
+        fraction: totalSeconds > 0
+            ? (c.chunkStartTime + chunkSeconds) / totalSeconds
+            : null,
+      );
+
+  /// Mobile path: per-chunk decode via the platform-native audio runner.
+  /// Adds overlap + dedup to match the desktop path.
   Stream<TranscribeProgress> _transcribeChunkedMobile(
     File audio, {
     required double totalSeconds,
@@ -511,16 +523,12 @@ class WhisperTranscriber {
           fraction: i / chunkCount,
         );
 
-        final result = await FfmpegRunner.instance.ffmpeg([
-          '-y',
-          '-ss', '$start',
-          '-t', '$duration',
-          '-i', audio.path,
-          '-ar', '16000',
-          '-ac', '1',
-          '-c:a', 'pcm_s16le',
-          wavPath,
-        ]);
+        final result = await FfmpegRunner.instance.decodeToWav(
+          inputPath: audio.path,
+          outputPath: wavPath,
+          startSeconds: start.toDouble(),
+          durationSeconds: duration.toDouble(),
+        );
         if (!result.ok) {
           throw StateError(
             'ffmpeg chunk $i failed (code ${result.code}): ${result.output}',
@@ -631,19 +639,10 @@ class WhisperTranscriber {
   static String _normalizeForDedup(String s) =>
       s.replaceAll(_dedupPunctSpace, '').toLowerCase();
 
-  /// Audio probe via ffprobe. Returns 0 on any failure so chunked
-  /// transcribe falls back to the single-call path rather than guessing.
-  Future<double> _probeDurationSeconds(File audio) async {
-    final result = await FfmpegRunner.instance.ffprobe([
-      '-v', 'quiet',
-      '-show_entries', 'format=duration',
-      '-of', 'default=noprint_wrappers=1:nokey=1',
-      audio.path,
-    ]);
-    if (!result.ok) return 0;
-    final seconds = double.tryParse(result.output.trim());
-    return (seconds != null && seconds.isFinite && seconds > 0) ? seconds : 0;
-  }
+  /// Audio probe. Returns 0 on any failure so chunked transcribe falls
+  /// back to the single-call path rather than guessing.
+  Future<double> _probeDurationSeconds(File audio) =>
+      FfmpegRunner.instance.probeDurationSeconds(audio.path);
 
   /// Ensure the audio is in the shape sherpa_onnx expects: 16 kHz mono
   /// pcm_s16le WAV. Skips conversion if the input already ends in `.wav`
@@ -654,14 +653,10 @@ class WhisperTranscriber {
     final tmp = await getTemporaryDirectory();
     final outPath =
         '${tmp.path}/palimp_full_${DateTime.now().millisecondsSinceEpoch}.wav';
-    final result = await FfmpegRunner.instance.ffmpeg([
-      '-y',
-      '-i', audio.path,
-      '-ar', '16000',
-      '-ac', '1',
-      '-c:a', 'pcm_s16le',
-      outPath,
-    ]);
+    final result = await FfmpegRunner.instance.decodeToWav(
+      inputPath: audio.path,
+      outputPath: outPath,
+    );
     if (!result.ok) {
       throw StateError('ffmpeg conversion failed: ${result.output}');
     }

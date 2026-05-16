@@ -44,10 +44,12 @@ dependencies:
   # Android to offload matrix math to the device NPU (Hexagon on Pixel,
   # Tensor on Galaxy). Mirrors iOS's WhisperKit / Core ML / ANE path.
   sherpa_onnx: ^1.13.1
-  # ffmpeg powers the chunked transcriber — extracts one ~10-minute
-  # 16 kHz mono WAV slice at a time so whisper's per-chunk float buffer
-  # stays bounded on long audiobooks.
-  ffmpeg_kit_flutter_new_min: ^3.1.0
+  # Audio decoding is platform-native: MediaExtractor + MediaCodec on
+  # Android (see `android/.../NativeAudioDecoder.kt`), `Process.run` on
+  # desktop hitting a system ffmpeg. We used to depend on
+  # `ffmpeg_kit_flutter_new*`, but its published x86_64 .aar crashes at
+  # JNI_OnLoad on modern Android emulators and any Android 15+ device,
+  # and the minimal fork hasn't been republished with the fix.
   just_audio_background: ^0.0.1-beta.17
   # Desktop backend for just_audio. On Windows/Linux (and macOS), routes
   # just_audio playback through libmpv via media_kit. On Android/iOS this
@@ -97,12 +99,18 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # GLSL page-curl shader (cylindrical fold + lighting). Bidirectional —
-  # a `direction` uniform selects forward (fold marches right→left,
-  # revealing the next page) vs. backward (left→right, revealing the
-  # previous page). See lib/reader/curl_page_view.dart for the Dart side.
+  # GLSL page-curl shaders — two slots picked by CurlPageView based on
+  # spread vs single mode:
+  #   - page_curl_card.frag   : rigid hinge rotation, used in spread mode
+  #     (tablet / desktop landscape / foldable open) where the math has to
+  #     play nicely with a static facing page.
+  #   - page_curl_paper.frag  : cylindrical paper curl, used in single mode
+  #     (phone, folded foldable) — the iBooks-style real-paper look.
+  # Both share the same uniform layout so the Dart-side painter doesn't
+  # branch. See lib/reader/curl_page_view.dart for the slot wiring.
   shaders:
-    - shaders/page_curl.frag
+    - shaders/page_curl_card.frag
+    - shaders/page_curl_paper.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:

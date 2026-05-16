@@ -1,9 +1,15 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_shaders/flutter_shaders.dart';
+
+// Impeller (Android) returns `RenderRepaintBoundary.toImageSync` with
+// bottom-left V, so a top-left sample reads upside-down. Skia desktop is
+// already top-left, so the flip stays off there.
+final bool _impellerSnapshotRotated = Platform.isAndroid;
 
 /// Direction of a page-curl gesture.
 enum CurlDirection {
@@ -154,10 +160,10 @@ class _CurlPageViewState extends State<CurlPageView>
   // Touch position in the flipping leaf's local coordinate space. So
   // (origin = leaf width, pointer = 0) is a complete forward curl, etc.
   double _originX = 0;
+  double _originY = 0;
   double _pointerX = 0;
+  double _pointerY = 0;
 
-  // Latest measured leaf width (full viewport in single mode, half in
-  // spread mode). All curl math is in this coordinate space.
   // Flipping leaf's intrinsic dimensions (half the viewport in spread
   // mode, full in single mode). The curl shader treats this as the size
   // of the page texture and the bound for drag / commit math.
@@ -315,6 +321,7 @@ class _CurlPageViewState extends State<CurlPageView>
     _animFrom = null;
     _animTo = null;
     _pointerX = _originX;
+    _pointerY = _originY;
     _disposeSnapshot();
     if (mounted) setState(() {});
   }
@@ -338,7 +345,9 @@ class _CurlPageViewState extends State<CurlPageView>
     setState(() {
       _activeDirection = dir;
       _originX = _originForDir(dir);
+      _originY = _cardRect().center.dy;
       _pointerX = _originX;
+      _pointerY = _originY;
     });
     await WidgetsBinding.instance.endOfFrame;
     _captureFlippingSnapshot();
@@ -349,6 +358,7 @@ class _CurlPageViewState extends State<CurlPageView>
       widget.controller._page = widget.spread ? target & ~1 : target;
       _activeDirection = null;
       _pointerX = _originX;
+      _pointerY = _originY;
       _disposeSnapshot();
     });
     widget.onPageChanged?.call(widget.controller._page);
@@ -423,7 +433,9 @@ class _CurlPageViewState extends State<CurlPageView>
     _animFrom = null;
     _animTo = null;
     _pointerX = d.localPosition.dx;
+    _pointerY = d.localPosition.dy;
     _originX = _pointerX;
+    _originY = _pointerY;
     _activeDirection = null;
     setState(() {});
   }
@@ -431,6 +443,7 @@ class _CurlPageViewState extends State<CurlPageView>
   void _onDragUpdate(DragUpdateDetails d) {
     if (_dragLocked) return;
     _pointerX = d.localPosition.dx;
+    _pointerY = d.localPosition.dy;
     if (_activeDirection == null) {
       if (_pointerX < _originX - 4) {
         _activeDirection = CurlDirection.forward;
@@ -499,6 +512,7 @@ class _CurlPageViewState extends State<CurlPageView>
               widget.spread ? newLeftPage & ~1 : newLeftPage;
           _activeDirection = null;
           _pointerX = _originX;
+          _pointerY = _originY;
           _disposeSnapshot();
         });
         widget.onPageChanged?.call(widget.controller._page);
@@ -513,6 +527,7 @@ class _CurlPageViewState extends State<CurlPageView>
               widget.spread ? newLeftPage & ~1 : newLeftPage;
           _activeDirection = null;
           _pointerX = _originX;
+          _pointerY = _originY;
           _disposeSnapshot();
         });
         widget.onPageChanged?.call(widget.controller._page);
@@ -522,6 +537,7 @@ class _CurlPageViewState extends State<CurlPageView>
       if (!widget.animationsEnabled) {
         setState(() {
           _pointerX = _originX;
+          _pointerY = _originY;
           _activeDirection = null;
           _disposeSnapshot();
         });
@@ -708,11 +724,17 @@ class _CurlPageViewState extends State<CurlPageView>
     );
   }
 
-  // The page that gets revealed underneath the curl. Single mode: fills
-  // the viewport. Spread mode: clipped to the flipping side; the static
-  // page is already drawn on the other half.
+  // The page revealed underneath the curl. Single mode fills the
+  // viewport; spread mode is clipped to the flipping side (the static
+  // page on the other half is already drawn).
+  //
+  // Gated on `_flippingSnapshot != null` to skip the 1-frame gap
+  // between setting `_activeDirection` and the post-frame snapshot
+  // capture. Without the gate, the new page paints on top of the
+  // still-flat flipping leaf for a frame, which reads as a page swap
+  // at the instant the curl starts.
   List<Widget> _buildRevealLayer(CurlDirection? dir) {
-    if (dir == null) return const [];
+    if (dir == null || _flippingSnapshot == null) return const [];
     final idx = _revealedPage;
     if (idx == null || !_hasPage(idx)) return const [];
     final side = _sideForIdx(idx);
@@ -782,11 +804,14 @@ class _CurlPageViewState extends State<CurlPageView>
       child: _CurlLayer(
         snapshot: snapshot,
         backSnapshot: backSnapshot,
-        pointerX: _pointerX,
-        originX: _originX,
+        pointer: Offset(_pointerX, _pointerY),
+        origin: Offset(_originX, _originY),
         direction: dir,
         backColor: backColor,
         container: _cardRect(),
+        shaderAssetKey: widget.spread
+            ? 'shaders/page_curl_card.frag'
+            : 'shaders/page_curl_paper.frag',
       ),
     );
   }
@@ -822,20 +847,22 @@ class _CurlLayer extends StatelessWidget {
   const _CurlLayer({
     required this.snapshot,
     required this.backSnapshot,
-    required this.pointerX,
-    required this.originX,
+    required this.pointer,
+    required this.origin,
     required this.direction,
     required this.backColor,
     required this.container,
+    required this.shaderAssetKey,
   });
 
   final ui.Image snapshot;
   final ui.Image? backSnapshot;
-  final double pointerX;
-  final double originX;
+  final Offset pointer;
+  final Offset origin;
   final CurlDirection direction;
   final Color backColor;
   final Rect container;
+  final String shaderAssetKey;
 
   @override
   Widget build(BuildContext context) {
@@ -846,8 +873,8 @@ class _CurlLayer extends StatelessWidget {
             snapshot: snapshot,
             backSnapshot: backSnapshot,
             shader: shader,
-            pointerX: pointerX,
-            originX: originX,
+            pointer: pointer,
+            origin: origin,
             direction: direction,
             backColor: backColor,
             container: container,
@@ -855,7 +882,7 @@ class _CurlLayer extends StatelessWidget {
           size: Size.infinite,
         );
       },
-      assetKey: 'shaders/page_curl.frag',
+      assetKey: shaderAssetKey,
     );
   }
 }
@@ -865,8 +892,8 @@ class _CurlPainter extends CustomPainter {
     required this.snapshot,
     required this.backSnapshot,
     required this.shader,
-    required this.pointerX,
-    required this.originX,
+    required this.pointer,
+    required this.origin,
     required this.direction,
     required this.backColor,
     required this.container,
@@ -875,8 +902,8 @@ class _CurlPainter extends CustomPainter {
   final ui.Image snapshot;
   final ui.Image? backSnapshot;
   final ui.FragmentShader shader;
-  final double pointerX;
-  final double originX;
+  final Offset pointer;
+  final Offset origin;
   final CurlDirection direction;
   final Color backColor;
   final Rect container;
@@ -885,10 +912,10 @@ class _CurlPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final hasBack = backSnapshot != null;
     shader.setFloatUniforms((u) {
-      // Uniforms in declaration order — see shaders/page_curl.frag.
+      // Uniforms in declaration order — see shaders/page_curl_*.frag.
       u.setSize(size);
-      u.setFloat(pointerX);
-      u.setFloat(originX);
+      u.setOffset(pointer);
+      u.setOffset(origin);
       u.setFloats(
           [container.left, container.top, container.right, container.bottom]);
       u.setFloat(0.0);
@@ -898,6 +925,7 @@ class _CurlPainter extends CustomPainter {
       u.setFloat(backColor.b);
       u.setFloat(backColor.a);
       u.setFloat(hasBack ? 1.0 : 0.0);
+      u.setFloat(_impellerSnapshotRotated ? 1.0 : 0.0);
     });
     shader.setImageSampler(0, snapshot);
     // Sampler 1 must always be bound; the hasBack uniform decides
@@ -914,8 +942,8 @@ class _CurlPainter extends CustomPainter {
   bool shouldRepaint(covariant _CurlPainter old) =>
       old.snapshot != snapshot ||
       old.backSnapshot != backSnapshot ||
-      old.pointerX != pointerX ||
-      old.originX != originX ||
+      old.pointer != pointer ||
+      old.origin != origin ||
       old.direction != direction ||
       old.backColor != backColor ||
       old.container != container;

@@ -354,33 +354,24 @@ class _AlignBanner extends StatefulWidget {
   State<_AlignBanner> createState() => _AlignBannerState();
 }
 
-class _AlignBannerState extends State<_AlignBanner> {
+/// Per-second elapsed counter for alignment phases. Resets at every phase
+/// boundary so the visible time always reflects the current phase, not
+/// total alignment time. Only ticks on phases that take long enough to
+/// warrant it (transcribe, align) — short phases like "downloading" don't
+/// start the timer, since the indeterminate spinner is enough.
+mixin _AlignmentTickerMixin<T extends StatefulWidget> on State<T> {
   Timer? _ticker;
   Duration _elapsed = Duration.zero;
 
-  @override
-  void initState() {
-    super.initState();
-    _resetForLabel(widget.stage.label);
-  }
+  Duration get elapsed => _elapsed;
+  bool get tickerActive => _ticker != null;
 
-  @override
-  void didUpdateWidget(covariant _AlignBanner old) {
-    super.didUpdateWidget(old);
-    if (widget.stage.label != old.stage.label) {
-      _resetForLabel(widget.stage.label);
-    }
-  }
-
-  /// Restart the elapsed counter at every phase boundary — transcribe is
-  /// the long one, and the user only cares about elapsed time inside
-  /// whichever phase is currently running. Re-aligns from chapter changes
-  /// also start fresh.
-  void _resetForLabel(String label) {
+  void resetTickerForLabel(String label) {
     _ticker?.cancel();
     _ticker = null;
     _elapsed = Duration.zero;
-    if (_isLongRunning(label)) {
+    final s = label.toLowerCase();
+    if (s.contains('transcrib') || s.contains('align')) {
       _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
         setState(() => _elapsed += const Duration(seconds: 1));
@@ -388,21 +379,32 @@ class _AlignBannerState extends State<_AlignBanner> {
     }
   }
 
-  bool _isLongRunning(String label) {
-    final s = label.toLowerCase();
-    return s.contains('transcrib') || s.contains('align');
-  }
-
   @override
   void dispose() {
     _ticker?.cancel();
     super.dispose();
   }
+}
+
+class _AlignBannerState extends State<_AlignBanner>
+    with _AlignmentTickerMixin {
+  @override
+  void initState() {
+    super.initState();
+    resetTickerForLabel(widget.stage.label);
+  }
+
+  @override
+  void didUpdateWidget(covariant _AlignBanner old) {
+    super.didUpdateWidget(old);
+    if (widget.stage.label != old.stage.label) {
+      resetTickerForLabel(widget.stage.label);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final c = widget.colors;
-    final showElapsed = _ticker != null;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
@@ -425,8 +427,8 @@ class _AlignBannerState extends State<_AlignBanner> {
             child: Text(widget.stage.label,
                 style: TextStyle(color: c.inkSoft, fontSize: 13)),
           ),
-          if (showElapsed)
-            Text(_formatElapsed(_elapsed),
+          if (tickerActive)
+            Text(formatDuration(elapsed),
                 style: TextStyle(
                   color: c.inkMuted,
                   fontSize: 12,
@@ -436,13 +438,6 @@ class _AlignBannerState extends State<_AlignBanner> {
       ),
     );
   }
-}
-
-String _formatElapsed(Duration d) {
-  final h = d.inHours;
-  final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-  final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-  return h > 0 ? '$h:$m:$s' : '$m:$s';
 }
 
 enum _ParaActionType { highlight, bookmark, note, play, playNeedsAlign, remove }
@@ -944,53 +939,22 @@ class _AlignmentFullscreen extends StatefulWidget {
   State<_AlignmentFullscreen> createState() => _AlignmentFullscreenState();
 }
 
-class _AlignmentFullscreenState extends State<_AlignmentFullscreen> {
+class _AlignmentFullscreenState extends State<_AlignmentFullscreen>
+    with _AlignmentTickerMixin {
   static const _phases = ['Downloading', 'Transcribing', 'Aligning'];
-
-  Timer? _ticker;
-  Duration _elapsed = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _resetForLabel(widget.stage.label);
+    resetTickerForLabel(widget.stage.label);
   }
 
   @override
   void didUpdateWidget(covariant _AlignmentFullscreen old) {
     super.didUpdateWidget(old);
     if (widget.stage.label != old.stage.label) {
-      _resetForLabel(widget.stage.label);
+      resetTickerForLabel(widget.stage.label);
     }
-  }
-
-  /// `transcribeChunked` falls back to a single-call transcribe for audio
-  /// short enough to fit in one whisper pass, and that path can't emit a
-  /// real fraction. The elapsed timer kicks in only in those cases — it
-  /// proves the work is alive while the indeterminate `LinearProgressIndicator`
-  /// runs. Long audiobooks always have a real `i / N` fraction from the
-  /// chunked path and skip this.
-  void _resetForLabel(String label) {
-    _ticker?.cancel();
-    _ticker = null;
-    _elapsed = Duration.zero;
-    if (_isLongRunning(label)) {
-      _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (!mounted) return;
-        setState(() => _elapsed += const Duration(seconds: 1));
-      });
-    }
-  }
-
-  bool _isLongRunning(String label) {
-    final s = label.toLowerCase();
-    return s.contains('transcrib') || s.contains('align');
-  }
-
-  @override
-  void dispose() {
-    _ticker?.cancel();
-    super.dispose();
   }
 
   int get _phaseIdx {
@@ -1074,8 +1038,8 @@ class _AlignmentFullscreenState extends State<_AlignmentFullscreen> {
                           Text(
                             pct != null
                                 ? '$pct%'
-                                : (_ticker != null
-                                    ? _formatElapsed(_elapsed)
+                                : (tickerActive
+                                    ? formatDuration(elapsed)
                                     : ''),
                             style: TextStyle(
                                 color: colors.inkMuted,

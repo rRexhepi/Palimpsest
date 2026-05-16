@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_new_min/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_min/ffprobe_kit.dart';
-import 'package:ffmpeg_kit_flutter_new_min/return_code.dart';
+import 'android_native_decoder.dart';
 
-/// Result of a single ffmpeg / ffprobe invocation. `code` follows ffmpeg
+/// Result of a single audio-decode invocation. `code` follows ffmpeg
 /// convention (0 = success, non-zero = failure); `output` is the merged
 /// stdout/stderr so callers can surface failures with real diagnostics.
 class FfmpegResult {
@@ -15,55 +13,133 @@ class FfmpegResult {
   bool get ok => code == 0;
 }
 
-/// Platform-dispatched ffmpeg/ffprobe runner.
+/// Platform-dispatched audio decoder.
 ///
-/// On Android / iOS we use `ffmpeg_kit_flutter_new_min` — ships the binaries
-/// inside the app bundle. On Windows / Linux / macOS we shell out to a
-/// system-installed `ffmpeg` / `ffprobe` on PATH (or whatever
-/// `PALIMPSEST_FFMPEG` / `PALIMPSEST_FFPROBE` env vars point to). Desktop
-/// users see a clear `StateError` at first transcribe if the binaries are
-/// missing.
+/// On Android we go through `AndroidNativeDecoder` — a `MediaExtractor`
+/// / `MediaCodec` slot living in the Kotlin layer. We dropped the
+/// `ffmpeg_kit_flutter_*` packages: every published x86_64 build crashes
+/// at `JNI_OnLoad` on modern Android emulators, and MediaExtractor /
+/// MediaCodec are first-party APIs available since API 16 that decode
+/// every audio format the system knows. On Windows / Linux / macOS we
+/// shell out to a system-installed `ffmpeg` / `ffprobe` on PATH (or
+/// whatever `PALIMPSEST_FFMPEG` / `PALIMPSEST_FFPROBE` env vars point
+/// at). The Apple iOS / macOS app isn't a Flutter target — it lives in
+/// `App/` + `PalimpsestCore/` and uses WhisperKit + AVFoundation, no
+/// ffmpeg involved.
 class FfmpegRunner {
   static final FfmpegRunner instance = FfmpegRunner._();
   FfmpegRunner._();
 
-  bool get _useNative => Platform.isAndroid || Platform.isIOS;
+  bool get _useNativeAndroid => Platform.isAndroid;
 
-  Future<FfmpegResult> ffmpeg(List<String> args) =>
-      _useNative ? _runNativeFfmpeg(args) : _runHostBinary(_ffmpegBin, args);
+  /// Decode a (possibly trimmed) section of [inputPath] into a 16-bit
+  /// PCM WAV at [outputPath]. Defaults match what the whisper pipeline
+  /// wants: 16 kHz mono.
+  Future<FfmpegResult> decodeToWav({
+    required String inputPath,
+    required String outputPath,
+    double? startSeconds,
+    double? durationSeconds,
+    int sampleRate = 16000,
+    int channels = 1,
+  }) {
+    if (_useNativeAndroid) {
+      return _decodeAndroidNative(
+        inputPath: inputPath,
+        outputPath: outputPath,
+        startSeconds: startSeconds,
+        durationSeconds: durationSeconds,
+        sampleRate: sampleRate,
+        channels: channels,
+      );
+    }
+    return _decodeViaHostFfmpeg(
+      inputPath: inputPath,
+      outputPath: outputPath,
+      startSeconds: startSeconds,
+      durationSeconds: durationSeconds,
+      sampleRate: sampleRate,
+      channels: channels,
+    );
+  }
 
-  Future<FfmpegResult> ffprobe(List<String> args) =>
-      _useNative ? _runNativeFfprobe(args) : _runHostBinary(_ffprobeBin, args);
+  /// Total duration of [inputPath] in seconds, or `0` if the probe fails.
+  Future<double> probeDurationSeconds(String inputPath) async {
+    if (_useNativeAndroid) {
+      return AndroidNativeDecoder.durationSeconds(inputPath);
+    }
+    final r = await _runHostBinary(_ffprobeBin, [
+      '-v', 'quiet',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      inputPath,
+    ]);
+    if (!r.ok) return 0;
+    final seconds = double.tryParse(r.output.trim());
+    return (seconds != null && seconds.isFinite && seconds > 0) ? seconds : 0;
+  }
 
   /// Spawn ffmpeg with its stdout/stderr exposed for streaming consumption.
-  /// Desktop-only — `ffmpeg_kit` on mobile gives no equivalent live pipe.
-  /// Callers must `await Process.exitCode` to reap the child.
+  /// Desktop-only — Android's MediaCodec path runs the decode to
+  /// completion. Callers must `await Process.exitCode` to reap the child.
   Future<Process> startFfmpeg(List<String> args) {
-    if (_useNative) {
+    if (_useNativeAndroid) {
       throw UnsupportedError(
-        'startFfmpeg is desktop-only. On mobile, use ffmpeg() which runs the '
-        'invocation to completion.',
+        'startFfmpeg is desktop-only. On Android, use decodeToWav() which '
+        'runs the decode to completion via MediaExtractor + MediaCodec.',
       );
     }
     return Process.start(_ffmpegBin, args, runInShell: false);
   }
 
-  bool get supportsStreamingFfmpeg => !_useNative;
+  bool get supportsStreamingFfmpeg => !_useNativeAndroid;
 
-  Future<FfmpegResult> _runNativeFfmpeg(List<String> args) async {
-    final session = await FFmpegKit.executeWithArguments(args);
-    final code = await session.getReturnCode();
-    final out = (await session.getOutput()) ?? '';
-    final value = code?.getValue() ?? -1;
-    return FfmpegResult(ReturnCode.isSuccess(code) ? 0 : value, out);
+  Future<FfmpegResult> _decodeAndroidNative({
+    required String inputPath,
+    required String outputPath,
+    double? startSeconds,
+    double? durationSeconds,
+    int sampleRate = 16000,
+    int channels = 1,
+  }) async {
+    try {
+      await AndroidNativeDecoder.decode(
+        sourcePath: inputPath,
+        outputPath: outputPath,
+        startSeconds: startSeconds ?? 0,
+        durationSeconds: durationSeconds,
+        sampleRate: sampleRate,
+        channels: channels,
+      );
+      return const FfmpegResult(0, '');
+    } catch (e) {
+      return FfmpegResult(1, 'NativeAudioDecoder.decode failed: $e');
+    }
   }
 
-  Future<FfmpegResult> _runNativeFfprobe(List<String> args) async {
-    final session = await FFprobeKit.executeWithArguments(args);
-    final code = await session.getReturnCode();
-    final out = (await session.getOutput()) ?? '';
-    final value = code?.getValue() ?? -1;
-    return FfmpegResult(ReturnCode.isSuccess(code) ? 0 : value, out);
+  Future<FfmpegResult> _decodeViaHostFfmpeg({
+    required String inputPath,
+    required String outputPath,
+    double? startSeconds,
+    double? durationSeconds,
+    int sampleRate = 16000,
+    int channels = 1,
+  }) {
+    final args = <String>['-y'];
+    if (startSeconds != null && startSeconds > 0) {
+      args.addAll(['-ss', startSeconds.toString()]);
+    }
+    if (durationSeconds != null && durationSeconds > 0) {
+      args.addAll(['-t', durationSeconds.toString()]);
+    }
+    args.addAll([
+      '-i', inputPath,
+      '-ar', '$sampleRate',
+      '-ac', '$channels',
+      '-c:a', 'pcm_s16le',
+      outputPath,
+    ]);
+    return _runHostBinary(_ffmpegBin, args);
   }
 
   String get _ffmpegBin =>

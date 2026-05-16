@@ -86,7 +86,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
   late int _segmentIndex;
   late CurlPageController _pageController;
   int _pageInChapter = 0;
-  // Per-segment cache of paginated pages, keyed by segmentId.
   final Map<String, List<ReaderPage>> _pagesBySegment = {};
   // Flat index across all chapters. Each entry is (segmentIndex, pageInChapter).
   // Same model as iOS `flatGlobalIndex` so a horizontal swipe past the last
@@ -748,10 +747,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final size = MediaQuery.sizeOf(context);
-    // Two-page spread is desktop-only and follows window aspect: wide
-    // window = facing pages, tall window = single. Toggling rebuilds the
-    // PageView controller so granular page math swaps in lockstep.
-    final wantsSpread = !isMobile && size.width > size.height;
+    // Two-page spread when the viewport is wide enough to fit two
+    // readable columns AND not extremely tall relative to its width.
+    // 600 dp is Material's compact / medium boundary; the 0.8 aspect
+    // floor lets near-square viewports (Pixel 10 Pro Fold inner display
+    // is ~852×883 dp open) qualify even when they're nominally portrait,
+    // while still keeping phones (typical aspect ≥ 2.0:1) on single.
+    // Toggling rebuilds the PageView controller so granular page math
+    // swaps in lockstep.
+    final wantsSpread =
+        size.width >= 600 && (size.width / size.height) >= 0.8;
     if (wantsSpread != _spreadMode) {
       _spreadMode = wantsSpread;
       _swapControllerForMode(wantsSpread);
