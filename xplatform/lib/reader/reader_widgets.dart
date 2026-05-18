@@ -49,12 +49,15 @@ class _PageView extends StatelessWidget {
               ),
             Expanded(
               // Pagination is by word count (170/page) and doesn't measure
-              // rendered height, so a small / unmaximized window can let
-              // a page overflow vertically. ClampingScrollPhysics lets the
-              // user scroll only the overflowing tail; pages that fit
-              // stay non-scrollable.
+              // rendered height. On desktop, an unmaximized window can
+              // overflow vertically — ClampingScrollPhysics lets the
+              // user scroll the tail. On mobile the viewport is always
+              // small, so the "scrollable page" reads as an off-axis
+              // page flip — kill it; pagination has to fit the page.
               child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
+                physics: isMobile
+                    ? const NeverScrollableScrollPhysics()
+                    : const ClampingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

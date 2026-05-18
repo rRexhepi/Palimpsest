@@ -22,13 +22,30 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
   });
 
+  /// Status-bar inset in logical pixels. Read off the platform view
+  /// rather than a BuildContext-backed MediaQuery, because [preferredSize]
+  /// is a getter and Scaffold reads it before `build` runs. Returns 0
+  /// when no view is attached yet (test harness, early boot).
+  static double _topInsetLogical() {
+    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+    if (view == null) return 0.0;
+    return view.padding.top / view.devicePixelRatio;
+  }
+
   @override
-  Size get preferredSize => Size.fromHeight(isMobile ? 44 : kToolbarHeight);
+  Size get preferredSize => isMobile
+      ? Size.fromHeight(44 + _topInsetLogical())
+      : const Size.fromHeight(kToolbarHeight);
 
   @override
   Widget build(BuildContext context) {
     return isMobile
-        ? _MobileHeader(title: title, leading: leading, actions: actions)
+        ? SafeArea(
+            top: true,
+            bottom: false,
+            child:
+                _MobileHeader(title: title, leading: leading, actions: actions),
+          )
         : _DesktopHeader(title: title, leading: leading, actions: actions);
   }
 }

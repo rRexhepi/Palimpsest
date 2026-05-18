@@ -30,7 +30,13 @@ const _kHeaderHeight = 44.0;
 const _kPagePadding = EdgeInsets.fromLTRB(28, 14, 28, 12);
 const _kBodyFontSize = 17.0;
 const _kBodyLineHeight = 25.0 / 17.0;
-const _kWordsPerPage = 170;
+// Pagination budget. Tuned by viewport — a phone fits roughly 60% of
+// what an unconstrained desktop reader holds at the same font size, and
+// we'd rather under-fill a page than overflow it (mobile is non-
+// scrollable, so overflow clips rather than scrolls).
+const _kWordsPerPageDesktop = 170;
+const _kWordsPerPageMobile = 110;
+int get _kWordsPerPage => isMobile ? _kWordsPerPageMobile : _kWordsPerPageDesktop;
 
 enum _SegmentKind { chapter, part, frontMatter }
 
@@ -217,8 +223,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         .map((p) => p.replaceAll(RegExp(r'\s*\n\s*'), ' ').trim())
         .where((p) => p.isNotEmpty)
         .toList(growable: false);
-    final pages = const Paginator(wordsPerPage: _kWordsPerPage)
-        .paginate(paragraphs);
+    final pages = Paginator(wordsPerPage: _kWordsPerPage).paginate(paragraphs);
     final out = pages.isEmpty
         ? const [ReaderPage(paragraphs: ['(empty section)'])]
         : pages;
