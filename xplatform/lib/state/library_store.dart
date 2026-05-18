@@ -13,16 +13,9 @@ import '../import/mobi_importer.dart';
 import '../import/pdf_importer.dart';
 import '../persistence/library_storage.dart';
 
-/// An in-flight (or just-completed) alignment for a single book.
-///
-/// LibraryStore owns the job, not the reader screen — closing a reader
-/// does not cancel the work. Other screens can call
-/// [LibraryStore.alignmentJobFor] to attach to an existing job and pick
-/// up progress mid-stream.
-///
-/// Subscribers get future stages via [stream] (a broadcast — events fired
-/// before subscription are lost; consult [lastStage] for the latest
-/// snapshot when you attach late).
+/// In-flight alignment for a single book. [stream] is a broadcast, so
+/// late subscribers should read [lastStage] for the current snapshot
+/// and listen for events from there.
 class AlignmentJob extends ChangeNotifier {
   AlignmentJob(this.bookId);
   final String bookId;
@@ -85,11 +78,8 @@ class LibraryStore extends ChangeNotifier {
   bool get isLoaded => _loaded;
   String? get lastError => _lastError;
 
-  /// Returns the currently-running (or just-completed) job for [bookId],
-  /// or null if no alignment has been started in this app launch.
   AlignmentJob? alignmentJobFor(String bookId) => _alignmentJobs[bookId];
 
-  /// True iff there's an in-flight alignment for [bookId].
   bool isAligning(String bookId) {
     final j = _alignmentJobs[bookId];
     return j != null && !j.isCompleted;
@@ -265,9 +255,8 @@ class LibraryStore extends ChangeNotifier {
   Future<AlignmentMap?> loadAlignment(StoredBook book) =>
       storage.loadAlignment(book);
 
-  /// Kick off (or attach to) the alignment for [book]. The returned
-  /// [AlignmentJob] survives the caller's lifecycle; closing a reader
-  /// screen does not cancel the work.
+  /// Returns the existing job for [book] if one is in flight, otherwise
+  /// starts a new one. Detached from the caller — survives UI disposal.
   AlignmentJob startAlignment(StoredBook book) {
     final existing = _alignmentJobs[book.id];
     if (existing != null && !existing.isCompleted) return existing;
@@ -282,10 +271,8 @@ class LibraryStore extends ChangeNotifier {
 
   Future<void> _runAlignmentJob(StoredBook book, AlignmentJob job) async {
     try {
-      // Android runs alignment in a foreground service so the OS won't
-      // kill it when the app goes to background. Every other platform
-      // keeps the alignment inline — desktop processes don't get
-      // backgrounded the same way, iOS native is a separate codebase.
+      // Android: foreground service so the OS won't kill the isolate
+      // when the app is backgrounded. Other platforms run inline.
       if (Platform.isAndroid) {
         await _runAlignmentViaForegroundService(book, job);
       } else {
@@ -305,9 +292,8 @@ class LibraryStore extends ChangeNotifier {
       debugPrint('alignment error for ${book.id}: $e\n$st');
       job._fail(e);
     } finally {
-      // Keep the completed job in the map briefly so a reader reopened
-      // moments after completion still sees the final state, then drop
-      // it on the next microtask. Failure stays visible the same way.
+      // Drop on the next microtask so subscribers attached during the
+      // final emit still see the close event.
       scheduleMicrotask(() {
         _alignmentJobs.remove(book.id);
         notifyListeners();
@@ -321,10 +307,6 @@ class LibraryStore extends ChangeNotifier {
     }
   }
 
-  /// Spawn the alignment in a foreground service so Android keeps it
-  /// alive across app background / activity death. The service runs in
-  /// its own isolate ([startTranscriptionTaskHandler]) and reports
-  /// progress via sendDataToMain → [_onForegroundServiceData].
   Future<void> _runAlignmentViaForegroundService(
     StoredBook book,
     AlignmentJob job,
@@ -353,9 +335,8 @@ class LibraryStore extends ChangeNotifier {
     FlutterForegroundTask.addTaskDataCallback(callback);
     try {
       await _ensureForegroundServiceInitialized();
-      // Pass the book id through prefs storage the service can read on
-      // its own isolate (plain MethodChannel arguments aren't bridged
-      // into TaskHandler.onStart).
+      // MethodChannel args don't reach TaskHandler.onStart; round-trip
+      // the book id via the plugin's prefs store instead.
       await FlutterForegroundTask.saveData(key: 'bookId', value: book.id);
       final result = await FlutterForegroundTask.startService(
         serviceId: 5552,

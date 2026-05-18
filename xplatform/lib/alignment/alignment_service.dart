@@ -44,9 +44,8 @@ class AlignmentService {
     return created;
   }
 
-  /// Tear down any spawned worker pool so the next alignment respawns
-  /// it from [WhisperConfig.forHost] — picks up live changes to the
-  /// transcription performance setting without restarting the app.
+  /// Disposes the worker pool. Next [alignBook] respawns it, picking up
+  /// any [WhisperConfig.forHost] change since the previous run.
   Future<void> resetTranscriberPool() async {
     final existing = _transcriber;
     if (existing == null) return;

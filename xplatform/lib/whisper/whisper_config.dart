@@ -31,16 +31,13 @@ extension TranscriptionPerformanceCodec on TranscriptionPerformance {
       );
 }
 
-/// Live perf level shared across the app. main.dart writes it on startup
-/// after reading SharedPreferences and again whenever the user changes
-/// the setting; [WhisperTranscriber] reads it lazily when spawning its
-/// worker pool, so changes take effect on the next transcription run.
+/// Read by [WhisperTranscriber] at pool-spawn time, so setting changes
+/// take effect on the next transcription run, not retroactively.
 final ValueNotifier<TranscriptionPerformance> activeTranscriptionPerformance =
     ValueNotifier<TranscriptionPerformance>(TranscriptionPerformance.balanced);
 
-/// Tunables the Whisper transcription pipeline reads when spawning its
-/// worker pool. All `Platform.*` lookups for transcription live in this
-/// file so the rest of the pipeline can stay platform-agnostic.
+/// All `Platform.*` lookups for the Whisper pipeline live here so the
+/// rest of the code stays platform-agnostic.
 class WhisperConfig {
   const WhisperConfig({
     required this.workerCount,
@@ -73,33 +70,22 @@ class WhisperConfig {
     );
   }
 
-  /// Resolved config for the current host at [level]. The skeleton picks
-  /// the platform's scaling strategy; each strategy decides how cores +
-  /// RAM map to workers + threads given that platform's constraints
-  /// (phones throttle on heat / battery / foreground responsiveness;
-  /// desktops assume plug-in power and lean into the chip).
-  ///
-  /// Each Whisper worker holds ~270 MB of int8 quantized weights plus a
-  /// per-decode working set; the strategies budget RAM accordingly.
+  /// Each worker holds ~270 MB of int8 weights; the per-platform
+  /// strategies budget cores and RAM against that.
   factory WhisperConfig.forLevel(TranscriptionPerformance level) =>
       (Platform.isAndroid || Platform.isIOS)
           ? _mobileForLevel(level)
           : _desktopForLevel(level);
 
-  /// Sensible default tier per platform. Mobile defaults to [balanced] so
-  /// transcription stays the user's foreground choice without pegging
-  /// every core; desktop defaults to [max] since the chip has the
-  /// thermal headroom and the user is at a plugged-in machine.
   static TranscriptionPerformance get defaultForHost =>
       (Platform.isAndroid || Platform.isIOS)
           ? TranscriptionPerformance.balanced
           : TranscriptionPerformance.max;
 
-  /// Phone strategy. Conservative on workers because each one pins
-  /// 270 MB of resident model and a phone OS treats sustained CPU + RAM
-  /// pressure as a thermal + lifecycle problem. ONNX Runtime stops
-  /// scaling past 4 intra-op threads, so we spend cores beyond that on
-  /// a second worker when (and only when) the phone has the RAM.
+  /// Mobile caps at 2 workers regardless of cores — phones thermal-
+  /// throttle under sustained load and the OS is hostile to apps that
+  /// peg every core. ONNX Runtime tops out at 4 intra-op threads, so
+  /// extra cores beyond `workers × 4` are wasted anyway.
   static WhisperConfig _mobileForLevel(TranscriptionPerformance level) {
     final cores = Platform.numberOfProcessors;
     final totalRamMb = _detectTotalRamMb();
@@ -129,11 +115,8 @@ class WhisperConfig {
     }
   }
 
-  /// Desktop strategy. Workers scale with cores up to a hard ceiling of
-  /// 4 (above that, ORT contention + L3 thrash starts eating the win).
-  /// Each worker still wants the same 4 intra-op threads, so the box
-  /// ends up doing `workers × 4` concurrent transcribes — matches the
-  /// pre-tunable `base()` behavior the app shipped with.
+  /// Workers cap at 4 — beyond that ORT contention and L3 thrash eat
+  /// the parallelism win.
   static WhisperConfig _desktopForLevel(TranscriptionPerformance level) {
     final cores = Platform.numberOfProcessors;
     final totalRamMb = _detectTotalRamMb();
@@ -168,16 +151,11 @@ class WhisperConfig {
     }
   }
 
-  /// Total system RAM in megabytes for the current device, or null when
-  /// the platform doesn't expose it via a file we can read cheaply.
-  /// Exposed for Settings UI so the user can see the detection result.
+  /// Returns null when the platform doesn't expose RAM via a file we
+  /// can read cheaply (iOS/macOS/Windows). Pool spawn falls back to
+  /// core-only scaling rather than paying a method-channel round trip.
   static int? get totalRamMb => _detectTotalRamMb();
 
-  /// Total system RAM in megabytes, read from `/proc/meminfo` on Linux
-  /// and Android (the kernel exposes it there for both). Returns null on
-  /// iOS/macOS/Windows — those need a platform channel to ask the OS
-  /// memory APIs, and we'd rather degrade to core-only scaling than
-  /// add a method-channel round-trip during pool spawn.
   static int? _detectTotalRamMb() {
     if (!Platform.isAndroid && !Platform.isLinux) return null;
     try {
@@ -193,7 +171,6 @@ class WhisperConfig {
     return null;
   }
 
-  /// Resolved config for whatever perf level is currently active.
   factory WhisperConfig.forHost() =>
       WhisperConfig.forLevel(activeTranscriptionPerformance.value);
 }

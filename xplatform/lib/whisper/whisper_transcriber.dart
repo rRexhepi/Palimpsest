@@ -62,9 +62,7 @@ class WhisperTranscriber {
     }
   }
 
-  /// Set in tests / call sites that need a fixed config. When null, the
-  /// pool is built from [WhisperConfig.forHost], which reads the live
-  /// [activeTranscriptionPerformance] notifier.
+  /// When null, the pool reads [WhisperConfig.forHost] on each spawn.
   final WhisperConfig? _configOverride;
   WhisperConfig get _config => _configOverride ?? WhisperConfig.forHost();
 
@@ -491,13 +489,9 @@ class WhisperTranscriber {
             : null,
       );
 
-  /// Mobile path: per-chunk decode via the platform-native audio runner.
-  /// Adds overlap + dedup to match the desktop path.
-  ///
-  /// Dispatches up to `pool.size` decode+transcribe chunks in flight so a
-  /// multi-worker pool actually parallelizes. Pending chunks drain in
-  /// submission order so dedup matches the serial reference exactly,
-  /// regardless of which worker finishes first.
+  /// Per-chunk decode via the platform-native audio runner, with up to
+  /// `pool.size` chunks in flight. Pending chunks drain in submission
+  /// order so dedup is deterministic regardless of worker finish order.
   Stream<TranscribeProgress> _transcribeChunkedMobile(
     File audio, {
     required double totalSeconds,
@@ -515,9 +509,9 @@ class WhisperTranscriber {
     final pending = <_PendingChunk>[];
 
     Future<_PendingChunk> dispatchChunk(int i) async {
-      // Chunk i (i > 0) starts `overlapSeconds` early and lasts an extra
-      // `overlapSeconds` so its head re-decodes the tail of chunk i-1.
-      // Words emitted twice are dropped in [_appendWithOverlapDedup].
+      // Chunks past the first start `overlapSeconds` early and run that
+      // much longer so boundaries re-decode with context on both sides;
+      // duplicates fall out in [_appendWithOverlapDedup].
       final start = i == 0 ? 0 : i * chunkSeconds - overlapSeconds;
       final duration =
           i == 0 ? chunkSeconds : chunkSeconds + overlapSeconds;
@@ -696,10 +690,8 @@ class WhisperTranscriber {
     _poolSpawning = null;
   }
 
-  /// Tear down the worker pool so the next transcribe respawns it from
-  /// the current [WhisperConfig.forHost]. Called when the user changes
-  /// the transcription performance setting so the change takes effect
-  /// on the next run without restarting the app.
+  /// Disposes the worker pool. Next transcribe respawns it from the
+  /// current [WhisperConfig.forHost].
   Future<void> resetPool() => dispose();
 }
 

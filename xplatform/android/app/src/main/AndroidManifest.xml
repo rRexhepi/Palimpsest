@@ -4,11 +4,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
-    <!-- Audiobook transcription runs in a foreground service so Android
-         keeps the Whisper isolate alive when the app is backgrounded or
-         the activity is destroyed. dataSync is the correct type per
-         android docs for "user-initiated work that must finish even if
-         the app is no longer visible." -->
+    <!-- Pairs with the dataSync foregroundServiceType on the
+         transcription service declared below. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
     <application
         android:label="Palimpsest"
@@ -39,9 +36,8 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
-        <!-- flutter_foreground_task ships its own ForegroundService class.
-             We declare it here with foregroundServiceType="dataSync" to
-             match the FOREGROUND_SERVICE_DATA_SYNC permission above. -->
+        <!-- Overrides the plugin's default foregroundServiceType to
+             match our FOREGROUND_SERVICE_DATA_SYNC declaration. -->
         <service
             android:name="com.pravera.flutter_foreground_task.service.ForegroundService"
             android:foregroundServiceType="dataSync"

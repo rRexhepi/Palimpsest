@@ -141,10 +141,8 @@ class LibraryStorage {
         .writeAsString(jsonEncode(book.toJson()));
   }
 
-  /// Load a single book by id without paging the whole library. Returns
-  /// null if the directory exists but the manifest is missing/corrupt.
-  /// Used from the foreground-service isolate, which has its own
-  /// LibraryStorage and only needs the one book it's transcribing.
+  /// Load a single book by id. Returns null if the manifest is missing
+  /// or corrupt; never throws.
   Future<StoredBook?> find(String id) async {
     final dir = await bookDir(id);
     final manifest = File('${dir.path}/book.json');

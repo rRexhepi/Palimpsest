@@ -7,19 +7,9 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import '../persistence/library_storage.dart';
 import 'alignment_service.dart';
 
-/// Service-side entry point. Registered with [FlutterForegroundTask] via
-/// `setTaskHandler`. Runs in its own Dart isolate spawned by the
-/// `flutter_foreground_task` plugin — separate from the UI isolate, so
-/// it survives even when Android tears the activity down.
-///
-/// Wire (UI → service):
-///   - main isolate calls `FlutterForegroundTask.startService(..., taskHandler)`
-///   - the plugin spins up the service + this isolate and invokes [onStart]
-///   - we read book id off the prefs the UI populated before startService
-///
-/// Wire (service → UI):
-///   - we publish stages via [FlutterForegroundTask.sendDataToMain]
-///   - the main isolate decodes them in [LibraryStore]'s data callback
+/// Foreground-service isolate entry point. The book id is read from
+/// [FlutterForegroundTask]'s key/value store rather than handler args
+/// because plain MethodChannel arguments aren't bridged into onStart.
 @pragma('vm:entry-point')
 void startTranscriptionTaskHandler() {
   FlutterForegroundTask.setTaskHandler(_TranscriptionTaskHandler());

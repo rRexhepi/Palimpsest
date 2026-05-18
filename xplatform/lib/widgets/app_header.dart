@@ -22,10 +22,9 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
     this.actions = const [],
   });
 
-  /// Status-bar inset in logical pixels. Read off the platform view
-  /// rather than a BuildContext-backed MediaQuery, because [preferredSize]
-  /// is a getter and Scaffold reads it before `build` runs. Returns 0
-  /// when no view is attached yet (test harness, early boot).
+  /// Read off the platform view rather than a BuildContext-backed
+  /// MediaQuery: Scaffold reads [preferredSize] before `build`. Returns
+  /// 0 when no view is attached (tests, early boot).
   static double _topInsetLogical() {
     final view = WidgetsBinding.instance.platformDispatcher.implicitView;
     if (view == null) return 0.0;

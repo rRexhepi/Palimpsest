@@ -30,10 +30,8 @@ const _kHeaderHeight = 44.0;
 const _kPagePadding = EdgeInsets.fromLTRB(28, 14, 28, 12);
 const _kBodyFontSize = 17.0;
 const _kBodyLineHeight = 25.0 / 17.0;
-// Pagination budget. Tuned by viewport — a phone fits roughly 60% of
-// what an unconstrained desktop reader holds at the same font size, and
-// we'd rather under-fill a page than overflow it (mobile is non-
-// scrollable, so overflow clips rather than scrolls).
+// Mobile pages are non-scrollable, so overflow clips. Under-fill rather
+// than overflow.
 const _kWordsPerPageDesktop = 170;
 const _kWordsPerPageMobile = 110;
 int get _kWordsPerPage => isMobile ? _kWordsPerPageMobile : _kWordsPerPageDesktop;
@@ -110,9 +108,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // leaves the inline `_AlignBanner` running.
   bool _showAlignFullscreen = false;
   AlignStage? _alignStage;
-  // Subscription to the LibraryStore-owned alignment job. Cancelled on
-  // dispose, but the job itself keeps running so flipping to a sibling
-  // reader or backing out doesn't drop the in-flight alignment.
+  // LibraryStore owns the job; we just hold the local subscription.
   StreamSubscription<AlignStage>? _alignSub;
   Timer? _progressTimer;
   bool _chromeShown = true;
@@ -169,8 +165,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
         if (mounted) setState(() => _alignment = map);
       });
     }
-    // Re-attach to an alignment that started before this reader instance
-    // opened — same book ID, still in flight on the store.
     final existing = widget.store.alignmentJobFor(_book.id);
     if (existing != null && !existing.isCompleted) {
       _attachToAlignmentJob(existing, showFullscreen: false);
@@ -193,9 +187,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
   void dispose() {
     _progressTimer?.cancel();
     _persistProgress();
-    // Detach from the alignment job but DON'T cancel it — the store
-    // owns the lifecycle now. Switching books or backing out keeps the
-    // transcription running; reopening reattaches via initState.
     _alignSub?.cancel();
     _pageController.dispose();
     _player.dispose();
@@ -349,9 +340,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
     _attachToAlignmentJob(job, showFullscreen: _alignment == null);
   }
 
-  /// Wire the reader's UI state to an [AlignmentJob]. Used both when the
-  /// user explicitly triggers alignment ([_runAlign]) and when the reader
-  /// reopens with an alignment that's already running from a prior visit.
   void _attachToAlignmentJob(AlignmentJob job, {required bool showFullscreen}) {
     _alignSub?.cancel();
     setState(() {
