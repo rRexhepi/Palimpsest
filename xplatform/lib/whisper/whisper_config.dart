@@ -21,10 +21,13 @@ enum TranscriptionPerformance {
 }
 
 extension TranscriptionPerformanceCodec on TranscriptionPerformance {
-  static TranscriptionPerformance parse(String? raw) =>
+  static TranscriptionPerformance parse(
+    String? raw, {
+    TranscriptionPerformance? fallback,
+  }) =>
       TranscriptionPerformance.values.firstWhere(
         (v) => v.name == raw,
-        orElse: () => TranscriptionPerformance.balanced,
+        orElse: () => fallback ?? WhisperConfig.defaultForHost,
       );
 }
 
@@ -70,26 +73,38 @@ class WhisperConfig {
     );
   }
 
-  /// Resolved config for the current host at [level]. Scales workers and
-  /// threads from `Platform.numberOfProcessors` and (where available)
-  /// total system RAM read from `/proc/meminfo`. The same formula runs
-  /// on desktop and mobile — the difference between them is that on
-  /// phones the user can dial [level] down via Settings when they want
-  /// the device responsive for other foreground work.
+  /// Resolved config for the current host at [level]. The skeleton picks
+  /// the platform's scaling strategy; each strategy decides how cores +
+  /// RAM map to workers + threads given that platform's constraints
+  /// (phones throttle on heat / battery / foreground responsiveness;
+  /// desktops assume plug-in power and lean into the chip).
   ///
-  /// Each Whisper worker holds ~270 MB of int8 quantized model weights
-  /// plus a per-decode working set. We only spawn a 2nd worker when the
-  /// device has both the cores (≥6) and the RAM (≥4 GB) to keep both
-  /// models resident without paging.
-  factory WhisperConfig.forLevel(TranscriptionPerformance level) {
+  /// Each Whisper worker holds ~270 MB of int8 quantized weights plus a
+  /// per-decode working set; the strategies budget RAM accordingly.
+  factory WhisperConfig.forLevel(TranscriptionPerformance level) =>
+      (Platform.isAndroid || Platform.isIOS)
+          ? _mobileForLevel(level)
+          : _desktopForLevel(level);
+
+  /// Sensible default tier per platform. Mobile defaults to [balanced] so
+  /// transcription stays the user's foreground choice without pegging
+  /// every core; desktop defaults to [max] since the chip has the
+  /// thermal headroom and the user is at a plugged-in machine.
+  static TranscriptionPerformance get defaultForHost =>
+      (Platform.isAndroid || Platform.isIOS)
+          ? TranscriptionPerformance.balanced
+          : TranscriptionPerformance.max;
+
+  /// Phone strategy. Conservative on workers because each one pins
+  /// 270 MB of resident model and a phone OS treats sustained CPU + RAM
+  /// pressure as a thermal + lifecycle problem. ONNX Runtime stops
+  /// scaling past 4 intra-op threads, so we spend cores beyond that on
+  /// a second worker when (and only when) the phone has the RAM.
+  static WhisperConfig _mobileForLevel(TranscriptionPerformance level) {
     final cores = Platform.numberOfProcessors;
     final totalRamMb = _detectTotalRamMb();
     switch (level) {
       case TranscriptionPerformance.max:
-        // ONNX Runtime stops scaling past 4 intra-op threads per session,
-        // so we cap threadsPerWorker there and spend additional cores
-        // on parallel workers instead — but only when the phone has the
-        // RAM to hold a 2nd model resident.
         final canMultiWorker = cores >= 6 &&
             (totalRamMb == null || totalRamMb >= 4000);
         final workers = canMultiWorker ? 2 : 1;
@@ -102,6 +117,45 @@ class WhisperConfig {
       case TranscriptionPerformance.balanced:
         return WhisperConfig(
           workerCount: 1,
+          threadsPerWorker: cores >= 4 ? 4 : 2,
+          useNNAPI: false,
+        );
+      case TranscriptionPerformance.light:
+        return const WhisperConfig(
+          workerCount: 1,
+          threadsPerWorker: 2,
+          useNNAPI: false,
+        );
+    }
+  }
+
+  /// Desktop strategy. Workers scale with cores up to a hard ceiling of
+  /// 4 (above that, ORT contention + L3 thrash starts eating the win).
+  /// Each worker still wants the same 4 intra-op threads, so the box
+  /// ends up doing `workers × 4` concurrent transcribes — matches the
+  /// pre-tunable `base()` behavior the app shipped with.
+  static WhisperConfig _desktopForLevel(TranscriptionPerformance level) {
+    final cores = Platform.numberOfProcessors;
+    final totalRamMb = _detectTotalRamMb();
+    switch (level) {
+      case TranscriptionPerformance.max:
+        final workersByCores = ((cores / 4).floor()).clamp(1, 4);
+        final workersByRam = totalRamMb == null
+            ? 4
+            : (((totalRamMb - 1500) ~/ 700)).clamp(1, 4);
+        final workers = workersByCores < workersByRam
+            ? workersByCores
+            : workersByRam;
+        final threads = ((cores ~/ workers).clamp(2, 4)).toInt();
+        return WhisperConfig(
+          workerCount: workers,
+          threadsPerWorker: threads,
+          useNNAPI: false,
+        );
+      case TranscriptionPerformance.balanced:
+        final workers = cores >= 16 ? 2 : 1;
+        return WhisperConfig(
+          workerCount: workers,
           threadsPerWorker: cores >= 4 ? 4 : 2,
           useNNAPI: false,
         );

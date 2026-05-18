@@ -56,7 +56,7 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
   HighlightColor _defaultHighlightColor = HighlightColor.amber;
   bool _swipeToFlipEnabled = true;
   TranscriptionPerformance _transcriptionPerformance =
-      TranscriptionPerformance.balanced;
+      WhisperConfig.defaultForHost;
   String? _lastBookId;
 
   @override
