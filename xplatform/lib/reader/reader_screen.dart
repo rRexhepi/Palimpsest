@@ -110,6 +110,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // leaves the inline `_AlignBanner` running.
   bool _showAlignFullscreen = false;
   AlignStage? _alignStage;
+  // Subscription to the LibraryStore-owned alignment job. Cancelled on
+  // dispose, but the job itself keeps running so flipping to a sibling
+  // reader or backing out doesn't drop the in-flight alignment.
+  StreamSubscription<AlignStage>? _alignSub;
   Timer? _progressTimer;
   bool _chromeShown = true;
 
@@ -165,6 +169,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
         if (mounted) setState(() => _alignment = map);
       });
     }
+    // Re-attach to an alignment that started before this reader instance
+    // opened — same book ID, still in flight on the store.
+    final existing = widget.store.alignmentJobFor(_book.id);
+    if (existing != null && !existing.isCompleted) {
+      _attachToAlignmentJob(existing, showFullscreen: false);
+    }
     _progressTimer =
         Timer.periodic(const Duration(seconds: 2), (_) => _persistProgress());
   }
@@ -183,6 +193,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
   void dispose() {
     _progressTimer?.cancel();
     _persistProgress();
+    // Detach from the alignment job but DON'T cancel it — the store
+    // owns the lifecycle now. Switching books or backing out keeps the
+    // transcription running; reopening reattaches via initState.
+    _alignSub?.cancel();
     _pageController.dispose();
     _player.dispose();
     _annotations.dispose();
@@ -329,31 +343,60 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Future<void> _runAlign() async {
+    final job = widget.store.startAlignment(_book);
+    // First-run shows the fullscreen overlay; re-aligns surface inline
+    // since the user is already in the middle of reading.
+    _attachToAlignmentJob(job, showFullscreen: _alignment == null);
+  }
+
+  /// Wire the reader's UI state to an [AlignmentJob]. Used both when the
+  /// user explicitly triggers alignment ([_runAlign]) and when the reader
+  /// reopens with an alignment that's already running from a prior visit.
+  void _attachToAlignmentJob(AlignmentJob job, {required bool showFullscreen}) {
+    _alignSub?.cancel();
     setState(() {
-      _aligning = true;
-      // First-run shows the fullscreen overlay; re-aligns surface inline
-      // since the user is already in the middle of reading.
-      _showAlignFullscreen = _alignment == null;
-      _alignStage = const AlignStage('Preparing…');
+      _aligning = !job.isCompleted;
+      _showAlignFullscreen = showFullscreen;
+      _alignStage = job.lastStage;
     });
-    try {
-      await for (final stage in widget.store.alignBook(_book)) {
+    _alignSub = job.stream.listen(
+      (stage) {
         if (!mounted) return;
         setState(() => _alignStage = stage);
-      }
-      final fresh = widget.store.books.firstWhere((b) => b.id == _book.id);
-      final map = await widget.store.loadAlignment(fresh);
-      if (mounted) {
+      },
+      onError: (Object e, StackTrace st) {
+        debugPrint('alignment error: $e\n$st');
+        if (!mounted) return;
+        setState(() {
+          _aligning = false;
+          _showAlignFullscreen = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Alignment failed: $e'),
+            action: SnackBarAction(label: 'Retry', onPressed: _runAlign),
+          ),
+        );
+      },
+      onDone: () async {
+        if (!mounted) return;
+        final fresh = widget.store.books.firstWhere(
+          (b) => b.id == _book.id,
+          orElse: () => _book,
+        );
+        final map = await widget.store.loadAlignment(fresh);
+        if (!mounted) return;
         setState(() {
           _book = fresh;
           _alignment = map;
+          _aligning = false;
+          _showAlignFullscreen = false;
         });
         // Visible completion feedback. Without this the fullscreen
-        // dismisses and the reader returns to looking exactly as it did,
-        // so the user can't tell whether anything actually happened.
-        // We also distinguish 0-anchor outcomes (audio/text mismatch)
-        // from real success, since "Play from here" silently does
-        // nothing when there are no anchors for that segment.
+        // dismisses and the reader looks identical to before so the user
+        // can't tell anything happened. Distinguish 0-anchor outcomes
+        // (audio/text mismatch) from real success — "Play from here"
+        // silently does nothing when there are no anchors.
         final wordCount = map?.words.length ?? 0;
         final messenger = ScaffoldMessenger.of(context);
         if (wordCount == 0) {
@@ -368,25 +411,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 'Alignment complete · $wordCount paragraph anchors synced'),
           ));
         }
-      }
-    } catch (e, st) {
-      debugPrint('alignment error: $e\n$st');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Alignment failed: $e'),
-            action: SnackBarAction(label: 'Retry', onPressed: _runAlign),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _aligning = false;
-          _showAlignFullscreen = false;
-        });
-      }
-    }
+      },
+    );
   }
 
   Future<void> _seekToParagraph(

@@ -1,19 +1,76 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 
 import '../alignment/alignment_service.dart';
 import '../alignment/alignment_types.dart';
+import '../alignment/transcription_task_handler.dart';
 import '../import/ebook_importer.dart';
 import '../import/mobi_importer.dart';
 import '../import/pdf_importer.dart';
 import '../persistence/library_storage.dart';
 
+/// An in-flight (or just-completed) alignment for a single book.
+///
+/// LibraryStore owns the job, not the reader screen — closing a reader
+/// does not cancel the work. Other screens can call
+/// [LibraryStore.alignmentJobFor] to attach to an existing job and pick
+/// up progress mid-stream.
+///
+/// Subscribers get future stages via [stream] (a broadcast — events fired
+/// before subscription are lost; consult [lastStage] for the latest
+/// snapshot when you attach late).
+class AlignmentJob extends ChangeNotifier {
+  AlignmentJob(this.bookId);
+  final String bookId;
+  final _controller = StreamController<AlignStage>.broadcast();
+  AlignStage _lastStage = const AlignStage('Preparing…');
+  bool _completed = false;
+  Object? _error;
+
+  Stream<AlignStage> get stream => _controller.stream;
+  AlignStage get lastStage => _lastStage;
+  bool get isCompleted => _completed;
+  Object? get error => _error;
+  bool get failed => _error != null;
+
+  void _emit(AlignStage stage) {
+    _lastStage = stage;
+    if (!_controller.isClosed) _controller.add(stage);
+    notifyListeners();
+  }
+
+  void _complete() {
+    _completed = true;
+    if (!_controller.isClosed) _controller.close();
+    notifyListeners();
+  }
+
+  void _fail(Object err) {
+    _error = err;
+    _completed = true;
+    if (!_controller.isClosed) {
+      _controller.addError(err);
+      _controller.close();
+    }
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    if (!_controller.isClosed) _controller.close();
+    super.dispose();
+  }
+}
+
 class LibraryStore extends ChangeNotifier {
   final LibraryStorage storage;
   final AlignmentService alignment;
   final List<StoredBook> _books = [];
+  final Map<String, AlignmentJob> _alignmentJobs = {};
   bool _loaded = false;
   bool _importing = false;
   String? _lastError;
@@ -27,6 +84,16 @@ class LibraryStore extends ChangeNotifier {
   bool get isImporting => _importing;
   bool get isLoaded => _loaded;
   String? get lastError => _lastError;
+
+  /// Returns the currently-running (or just-completed) job for [bookId],
+  /// or null if no alignment has been started in this app launch.
+  AlignmentJob? alignmentJobFor(String bookId) => _alignmentJobs[bookId];
+
+  /// True iff there's an in-flight alignment for [bookId].
+  bool isAligning(String bookId) {
+    final j = _alignmentJobs[bookId];
+    return j != null && !j.isCompleted;
+  }
 
   Future<void> load() async {
     try {
@@ -198,15 +265,139 @@ class LibraryStore extends ChangeNotifier {
   Future<AlignmentMap?> loadAlignment(StoredBook book) =>
       storage.loadAlignment(book);
 
-  Stream<AlignStage> alignBook(StoredBook book) async* {
-    await for (final stage in alignment.alignBook(book)) {
-      yield stage;
+  /// Kick off (or attach to) the alignment for [book]. The returned
+  /// [AlignmentJob] survives the caller's lifecycle; closing a reader
+  /// screen does not cancel the work.
+  AlignmentJob startAlignment(StoredBook book) {
+    final existing = _alignmentJobs[book.id];
+    if (existing != null && !existing.isCompleted) return existing;
+    final job = AlignmentJob(book.id);
+    _alignmentJobs[book.id] = job;
+    notifyListeners();
+    // Detached: errors are routed through job._fail, not rethrown.
+    // ignore: discarded_futures
+    _runAlignmentJob(book, job);
+    return job;
+  }
+
+  Future<void> _runAlignmentJob(StoredBook book, AlignmentJob job) async {
+    try {
+      // Android runs alignment in a foreground service so the OS won't
+      // kill it when the app goes to background. Every other platform
+      // keeps the alignment inline — desktop processes don't get
+      // backgrounded the same way, iOS native is a separate codebase.
+      if (Platform.isAndroid) {
+        await _runAlignmentViaForegroundService(book, job);
+      } else {
+        await _runAlignmentInline(book, job);
+      }
+      final dir = await storage.bookDir(book.id);
+      final fresh = _books.firstWhere(
+        (b) => b.id == book.id,
+        orElse: () => book,
+      );
+      final updated = fresh.copyWith(
+        alignmentPath: '${dir.path}/alignment.json',
+      );
+      await _replace(updated);
+      job._complete();
+    } catch (e, st) {
+      debugPrint('alignment error for ${book.id}: $e\n$st');
+      job._fail(e);
+    } finally {
+      // Keep the completed job in the map briefly so a reader reopened
+      // moments after completion still sees the final state, then drop
+      // it on the next microtask. Failure stays visible the same way.
+      scheduleMicrotask(() {
+        _alignmentJobs.remove(book.id);
+        notifyListeners();
+      });
     }
-    final dir = await storage.bookDir(book.id);
-    final updated = book.copyWith(
-      alignmentPath: '${dir.path}/alignment.json',
+  }
+
+  Future<void> _runAlignmentInline(StoredBook book, AlignmentJob job) async {
+    await for (final stage in alignment.alignBook(book)) {
+      job._emit(stage);
+    }
+  }
+
+  /// Spawn the alignment in a foreground service so Android keeps it
+  /// alive across app background / activity death. The service runs in
+  /// its own isolate ([startTranscriptionTaskHandler]) and reports
+  /// progress via sendDataToMain → [_onForegroundServiceData].
+  Future<void> _runAlignmentViaForegroundService(
+    StoredBook book,
+    AlignmentJob job,
+  ) async {
+    final completer = Completer<void>();
+    void callback(Object data) {
+      if (data is! String) return;
+      final msg = jsonDecode(data) as Map<String, dynamic>;
+      if (msg['bookId'] != book.id) return;
+      switch (msg['event']) {
+        case 'stage':
+          final fraction = msg['fraction'];
+          job._emit(AlignStage(
+            msg['label'] as String,
+            fraction: fraction is num ? fraction.toDouble() : null,
+          ));
+        case 'done':
+          if (!completer.isCompleted) completer.complete();
+        case 'error':
+          if (!completer.isCompleted) {
+            completer.completeError(StateError(msg['message'] as String));
+          }
+      }
+    }
+
+    FlutterForegroundTask.addTaskDataCallback(callback);
+    try {
+      await _ensureForegroundServiceInitialized();
+      // Pass the book id through prefs storage the service can read on
+      // its own isolate (plain MethodChannel arguments aren't bridged
+      // into TaskHandler.onStart).
+      await FlutterForegroundTask.saveData(key: 'bookId', value: book.id);
+      final result = await FlutterForegroundTask.startService(
+        serviceId: 5552,
+        notificationTitle: 'Aligning audiobook',
+        notificationText: 'Preparing ${book.title}',
+        callback: startTranscriptionTaskHandler,
+      );
+      if (result is ServiceRequestFailure) {
+        throw StateError(
+            'Foreground service refused to start: ${result.error}');
+      }
+      await completer.future;
+    } finally {
+      FlutterForegroundTask.removeTaskDataCallback(callback);
+      if (await FlutterForegroundTask.isRunningService) {
+        await FlutterForegroundTask.stopService();
+      }
+    }
+  }
+
+  bool _foregroundInitialized = false;
+  Future<void> _ensureForegroundServiceInitialized() async {
+    if (_foregroundInitialized) return;
+    FlutterForegroundTask.init(
+      androidNotificationOptions: AndroidNotificationOptions(
+        channelId: 'com.rexhep.palimpsest.transcription',
+        channelName: 'Audiobook transcription',
+        channelDescription:
+            'Progress for the audiobook alignment running in background.',
+        channelImportance: NotificationChannelImportance.LOW,
+        priority: NotificationPriority.LOW,
+      ),
+      iosNotificationOptions: const IOSNotificationOptions(),
+      foregroundTaskOptions: ForegroundTaskOptions(
+        eventAction: ForegroundTaskEventAction.nothing(),
+        autoRunOnBoot: false,
+        autoRunOnMyPackageReplaced: false,
+        allowWakeLock: true,
+        allowWifiLock: false,
+      ),
     );
-    await _replace(updated);
+    _foregroundInitialized = true;
   }
 
   Future<void> updateProgress(
