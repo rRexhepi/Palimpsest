@@ -44,6 +44,15 @@ class AlignmentService {
     return created;
   }
 
+  /// Tear down any spawned worker pool so the next alignment respawns
+  /// it from [WhisperConfig.forHost] — picks up live changes to the
+  /// transcription performance setting without restarting the app.
+  Future<void> resetTranscriberPool() async {
+    final existing = _transcriber;
+    if (existing == null) return;
+    await existing.resetPool();
+  }
+
   Stream<AlignStage> alignBook(StoredBook book) async* {
     if (book.audioPath == null) {
       throw StateError('Book ${book.id} has no audio attached');

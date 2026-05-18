@@ -1,13 +1,43 @@
 import 'dart:io';
 
-/// Tunables the Whisper transcription pipeline reads at startup. All
-/// `Platform.*` lookups for transcription live in this file so the rest
-/// of the pipeline can stay platform-agnostic.
-///
-/// Design: Linux is the reference. [WhisperConfig.base] is the
-/// canonical CPU-multi-worker setup it ships with; [WhisperConfig.forHost]
-/// starts from that and applies whatever a given platform needs to
-/// override.
+import 'package:flutter/foundation.dart';
+
+/// User-selectable CPU budget for the Whisper transcription pipeline.
+/// Stored in SharedPreferences and read at pool-spawn time.
+enum TranscriptionPerformance {
+  /// Use everything the device has. Roughly 3x faster than [light] on a
+  /// phone with 6+ cores; pulls ~540 MB resident if [WhisperConfig]
+  /// decides 2 workers fit.
+  max,
+
+  /// Default. Roughly 2x faster than [light] with no extra memory cost —
+  /// one worker, threads scaled to the device's perf cores.
+  balanced,
+
+  /// Smallest footprint. Mirrors the conservative 1 worker × 2 threads
+  /// the mobile build shipped before this was tunable. Pick when the
+  /// phone needs to stay responsive for other foreground apps.
+  light,
+}
+
+extension TranscriptionPerformanceCodec on TranscriptionPerformance {
+  static TranscriptionPerformance parse(String? raw) =>
+      TranscriptionPerformance.values.firstWhere(
+        (v) => v.name == raw,
+        orElse: () => TranscriptionPerformance.balanced,
+      );
+}
+
+/// Live perf level shared across the app. main.dart writes it on startup
+/// after reading SharedPreferences and again whenever the user changes
+/// the setting; [WhisperTranscriber] reads it lazily when spawning its
+/// worker pool, so changes take effect on the next transcription run.
+final ValueNotifier<TranscriptionPerformance> activeTranscriptionPerformance =
+    ValueNotifier<TranscriptionPerformance>(TranscriptionPerformance.balanced);
+
+/// Tunables the Whisper transcription pipeline reads when spawning its
+/// worker pool. All `Platform.*` lookups for transcription live in this
+/// file so the rest of the pipeline can stay platform-agnostic.
 class WhisperConfig {
   const WhisperConfig({
     required this.workerCount,
@@ -40,33 +70,76 @@ class WhisperConfig {
     );
   }
 
-  /// Linux baseline. Fans the decode across `min(4, cores/2)` workers
-  /// with the remaining cores spent inside each recognizer; CPU only.
-  /// Every other platform inherits from this and applies a delta.
-  factory WhisperConfig.base() {
+  /// Resolved config for the current host at [level]. Scales workers and
+  /// threads from `Platform.numberOfProcessors` and (where available)
+  /// total system RAM read from `/proc/meminfo`. The same formula runs
+  /// on desktop and mobile — the difference between them is that on
+  /// phones the user can dial [level] down via Settings when they want
+  /// the device responsive for other foreground work.
+  ///
+  /// Each Whisper worker holds ~270 MB of int8 quantized model weights
+  /// plus a per-decode working set. We only spawn a 2nd worker when the
+  /// device has both the cores (≥6) and the RAM (≥4 GB) to keep both
+  /// models resident without paging.
+  factory WhisperConfig.forLevel(TranscriptionPerformance level) {
     final cores = Platform.numberOfProcessors;
-    final workers = cores <= 2
-        ? 1
-        : cores <= 4
-            ? 2
-            : cores <= 8
-                ? 3
-                : 4;
-    return WhisperConfig(
-      workerCount: workers,
-      threadsPerWorker: (cores ~/ workers).clamp(1, 4),
-      useNNAPI: false,
-    );
+    final totalRamMb = _detectTotalRamMb();
+    switch (level) {
+      case TranscriptionPerformance.max:
+        // ONNX Runtime stops scaling past 4 intra-op threads per session,
+        // so we cap threadsPerWorker there and spend additional cores
+        // on parallel workers instead — but only when the phone has the
+        // RAM to hold a 2nd model resident.
+        final canMultiWorker = cores >= 6 &&
+            (totalRamMb == null || totalRamMb >= 4000);
+        final workers = canMultiWorker ? 2 : 1;
+        final threads = ((cores ~/ workers).clamp(2, 4)).toInt();
+        return WhisperConfig(
+          workerCount: workers,
+          threadsPerWorker: threads,
+          useNNAPI: false,
+        );
+      case TranscriptionPerformance.balanced:
+        return WhisperConfig(
+          workerCount: 1,
+          threadsPerWorker: cores >= 4 ? 4 : 2,
+          useNNAPI: false,
+        );
+      case TranscriptionPerformance.light:
+        return const WhisperConfig(
+          workerCount: 1,
+          threadsPerWorker: 2,
+          useNNAPI: false,
+        );
+    }
   }
 
-  /// Resolved config for the current host. Linux / Windows / macOS run
-  /// the base config unchanged; mobile constrains worker count so the
-  /// phone CPU doesn't end up multi-instance Whispering.
-  factory WhisperConfig.forHost() {
-    final base = WhisperConfig.base();
-    if (Platform.isAndroid || Platform.isIOS) {
-      return base.copyWith(workerCount: 1, threadsPerWorker: 2);
-    }
-    return base;
+  /// Total system RAM in megabytes for the current device, or null when
+  /// the platform doesn't expose it via a file we can read cheaply.
+  /// Exposed for Settings UI so the user can see the detection result.
+  static int? get totalRamMb => _detectTotalRamMb();
+
+  /// Total system RAM in megabytes, read from `/proc/meminfo` on Linux
+  /// and Android (the kernel exposes it there for both). Returns null on
+  /// iOS/macOS/Windows — those need a platform channel to ask the OS
+  /// memory APIs, and we'd rather degrade to core-only scaling than
+  /// add a method-channel round-trip during pool spawn.
+  static int? _detectTotalRamMb() {
+    if (!Platform.isAndroid && !Platform.isLinux) return null;
+    try {
+      final f = File('/proc/meminfo');
+      if (!f.existsSync()) return null;
+      for (final line in f.readAsLinesSync()) {
+        if (!line.startsWith('MemTotal:')) continue;
+        final m = RegExp(r'(\d+)\s*kB').firstMatch(line);
+        if (m == null) return null;
+        return int.parse(m.group(1)!) ~/ 1024;
+      }
+    } catch (_) {}
+    return null;
   }
+
+  /// Resolved config for whatever perf level is currently active.
+  factory WhisperConfig.forHost() =>
+      WhisperConfig.forLevel(activeTranscriptionPerformance.value);
 }

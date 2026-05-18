@@ -12,6 +12,7 @@ import '../settings/settings_screen.dart';
 import '../state/library_store.dart';
 import '../theme.dart';
 import '../widgets/app_dialog.dart';
+import '../whisper/whisper_config.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_primary_action.dart';
 import '../widgets/app_scaffold.dart';
@@ -27,6 +28,9 @@ class LibraryScreen extends StatefulWidget {
   final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
   final bool swipeToFlipEnabled;
   final ValueChanged<bool> onSwipeToFlipChanged;
+  final TranscriptionPerformance transcriptionPerformance;
+  final ValueChanged<TranscriptionPerformance>
+      onTranscriptionPerformanceChanged;
   final ValueChanged<String?> onOpenBook;
 
   const LibraryScreen({
@@ -40,6 +44,8 @@ class LibraryScreen extends StatefulWidget {
     required this.onDefaultHighlightColorChanged,
     required this.swipeToFlipEnabled,
     required this.onSwipeToFlipChanged,
+    required this.transcriptionPerformance,
+    required this.onTranscriptionPerformanceChanged,
     required this.onOpenBook,
   });
 
@@ -123,6 +129,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
         onDefaultHighlightColorChanged: widget.onDefaultHighlightColorChanged,
         swipeToFlipEnabled: widget.swipeToFlipEnabled,
         onSwipeToFlipChanged: widget.onSwipeToFlipChanged,
+        transcriptionPerformance: widget.transcriptionPerformance,
+        onTranscriptionPerformanceChanged:
+            widget.onTranscriptionPerformanceChanged,
       ),
     ));
   }

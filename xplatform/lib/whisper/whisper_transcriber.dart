@@ -55,15 +55,18 @@ class WhisperTranscriber {
   WhisperWorkerPool? _pool;
   Future<WhisperWorkerPool>? _poolSpawning;
 
-  WhisperTranscriber({WhisperConfig? config})
-      : _config = config ?? WhisperConfig.forHost() {
+  WhisperTranscriber({WhisperConfig? config}) : _configOverride = config {
     if (!_bindingsInitialized) {
       so.initBindings();
       _bindingsInitialized = true;
     }
   }
 
-  final WhisperConfig _config;
+  /// Set in tests / call sites that need a fixed config. When null, the
+  /// pool is built from [WhisperConfig.forHost], which reads the live
+  /// [activeTranscriptionPerformance] notifier.
+  final WhisperConfig? _configOverride;
+  WhisperConfig get _config => _configOverride ?? WhisperConfig.forHost();
 
   Future<Directory> _modelDir() async {
     final base = await getApplicationSupportDirectory();
@@ -490,6 +493,11 @@ class WhisperTranscriber {
 
   /// Mobile path: per-chunk decode via the platform-native audio runner.
   /// Adds overlap + dedup to match the desktop path.
+  ///
+  /// Dispatches up to `pool.size` decode+transcribe chunks in flight so a
+  /// multi-worker pool actually parallelizes. Pending chunks drain in
+  /// submission order so dedup matches the serial reference exactly,
+  /// regardless of which worker finishes first.
   Stream<TranscribeProgress> _transcribeChunkedMobile(
     File audio, {
     required double totalSeconds,
@@ -502,50 +510,65 @@ class WhisperTranscriber {
     ).create(recursive: true);
     final chunkCount = (totalSeconds / chunkSeconds).ceil();
     final allWords = <AudioWord>[];
+    final pool = await _ensurePool();
+    final maxInFlight = pool.size;
+    final pending = <_PendingChunk>[];
+
+    Future<_PendingChunk> dispatchChunk(int i) async {
+      // Chunk i (i > 0) starts `overlapSeconds` early and lasts an extra
+      // `overlapSeconds` so its head re-decodes the tail of chunk i-1.
+      // Words emitted twice are dropped in [_appendWithOverlapDedup].
+      final start = i == 0 ? 0 : i * chunkSeconds - overlapSeconds;
+      final duration =
+          i == 0 ? chunkSeconds : chunkSeconds + overlapSeconds;
+      final wavPath = '${chunkDir.path}/chunk_$i.wav';
+
+      final result = await FfmpegRunner.instance.decodeToWav(
+        inputPath: audio.path,
+        outputPath: wavPath,
+        startSeconds: start.toDouble(),
+        durationSeconds: duration.toDouble(),
+      );
+      if (!result.ok) {
+        throw StateError(
+          'ffmpeg chunk $i failed (code ${result.code}): ${result.output}',
+        );
+      }
+      final wave = so.readWave(wavPath);
+      if (wave.samples.isEmpty) {
+        throw StateError('Cannot read WAV: $wavPath');
+      }
+      try { await File(wavPath).delete(); } catch (_) {}
+
+      return _PendingChunk(
+        index: i,
+        chunkStartTime: start.toDouble(),
+        overlapEndGlobalTime: (i * chunkSeconds).toDouble(),
+        isFirstChunk: i == 0,
+        future: pool.transcribe(wave.samples, wave.sampleRate),
+      );
+    }
 
     try {
-      for (var i = 0; i < chunkCount; i++) {
-        // Chunk i (i > 0) starts `overlapSeconds` early and lasts an
-        // extra `overlapSeconds` so its head re-decodes the tail of chunk
-        // i-1. Words emitted twice are dropped in the dedup pass below.
-        final start = i == 0
-            ? 0
-            : i * chunkSeconds - overlapSeconds;
-        final duration = i == 0
-            ? chunkSeconds
-            : chunkSeconds + overlapSeconds;
-        final wavPath = '${chunkDir.path}/chunk_$i.wav';
+      var next = 0;
+      while (next < chunkCount && pending.length < maxInFlight) {
+        pending.add(await dispatchChunk(next));
+        next++;
+      }
 
-        final elapsedMin = (i * chunkSeconds / 60).toStringAsFixed(0);
+      while (pending.isNotEmpty) {
+        final done = await _drainOldestPending(pending, allWords);
+        final elapsedMin =
+            (done.chunkStartTime / 60).toStringAsFixed(0);
         final totalMin = (totalSeconds / 60).toStringAsFixed(0);
         yield TranscribeProgress(
           'Transcribing… $elapsedMin / $totalMin min',
-          fraction: i / chunkCount,
+          fraction: (done.index + 1) / chunkCount,
         );
-
-        final result = await FfmpegRunner.instance.decodeToWav(
-          inputPath: audio.path,
-          outputPath: wavPath,
-          startSeconds: start.toDouble(),
-          durationSeconds: duration.toDouble(),
-        );
-        if (!result.ok) {
-          throw StateError(
-            'ffmpeg chunk $i failed (code ${result.code}): ${result.output}',
-          );
+        if (next < chunkCount) {
+          pending.add(await dispatchChunk(next));
+          next++;
         }
-
-        final chunkWords = await _transcribeWav(wavPath);
-        final chunkStartTime = start.toDouble();
-        final overlapEndsAt = (i * chunkSeconds).toDouble();
-        _appendWithOverlapDedup(
-          allWords,
-          chunkWords,
-          chunkStartTime: chunkStartTime,
-          overlapEndGlobalTime: overlapEndsAt,
-          isFirstChunk: i == 0,
-        );
-        try { await File(wavPath).delete(); } catch (_) {}
       }
 
       yield TranscribeProgress(
@@ -672,6 +695,12 @@ class WhisperTranscriber {
     _pool = null;
     _poolSpawning = null;
   }
+
+  /// Tear down the worker pool so the next transcribe respawns it from
+  /// the current [WhisperConfig.forHost]. Called when the user changes
+  /// the transcription performance setting so the change takes effect
+  /// on the next run without restarting the app.
+  Future<void> resetPool() => dispose();
 }
 
 /// A chunk that's been handed off to the worker pool but whose words

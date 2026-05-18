@@ -11,6 +11,7 @@ import 'onboarding/onboarding_screen.dart';
 import 'reader/reader_screen.dart';
 import 'state/library_store.dart';
 import 'theme.dart';
+import 'whisper/whisper_config.dart';
 
 const _kThemePref = 'palimpsest.theme';
 const _kLastBookPref = 'palimpsest.lastOpenedBookID';
@@ -18,6 +19,7 @@ const _kOnboardedPref = 'palimpsest.hasCompletedOnboarding';
 const _kAnimationsPref = 'palimpsest.animationsEnabled';
 const _kHighlightColorPref = 'palimpsest.defaultHighlightColor';
 const _kSwipeToFlipPref = 'palimpsest.swipeToFlipEnabled';
+const _kTranscriptionPerfPref = 'palimpsest.transcriptionPerformance';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,6 +55,8 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
   bool _animationsEnabled = true;
   HighlightColor _defaultHighlightColor = HighlightColor.amber;
   bool _swipeToFlipEnabled = true;
+  TranscriptionPerformance _transcriptionPerformance =
+      TranscriptionPerformance.balanced;
   String? _lastBookId;
 
   @override
@@ -83,6 +87,10 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
     // selection; ON elsewhere where swipe is the natural navigation.
     final isDesktop = Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     _swipeToFlipEnabled = prefs?.getBool(_kSwipeToFlipPref) ?? !isDesktop;
+    _transcriptionPerformance = TranscriptionPerformanceCodec.parse(
+      prefs?.getString(_kTranscriptionPerfPref),
+    );
+    activeTranscriptionPerformance.value = _transcriptionPerformance;
     setState(() {
       _theme = choice;
       _bootstrapped = true;
@@ -112,6 +120,18 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
     setState(() => _swipeToFlipEnabled = enabled);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kSwipeToFlipPref, enabled);
+  }
+
+  Future<void> setTranscriptionPerformance(
+      TranscriptionPerformance level) async {
+    setState(() => _transcriptionPerformance = level);
+    activeTranscriptionPerformance.value = level;
+    // Dispose the existing worker pool so the next transcribe respawns
+    // with the new thread/worker counts. No-op if the user hasn't run
+    // alignment yet this session.
+    await _store.alignment.resetTranscriberPool();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kTranscriptionPerfPref, level.name);
   }
 
   Future<void> rememberLastBook(String? id) async {
@@ -173,6 +193,9 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
                   onDefaultHighlightColorChanged: setDefaultHighlightColor,
                   swipeToFlipEnabled: _swipeToFlipEnabled,
                   onSwipeToFlipChanged: setSwipeToFlipEnabled,
+                  transcriptionPerformance: _transcriptionPerformance,
+                  onTranscriptionPerformanceChanged:
+                      setTranscriptionPerformance,
                   onOpenBook: rememberLastBook,
                 ),
     );
@@ -190,6 +213,9 @@ class _Boot extends StatefulWidget {
   final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
   final bool swipeToFlipEnabled;
   final ValueChanged<bool> onSwipeToFlipChanged;
+  final TranscriptionPerformance transcriptionPerformance;
+  final ValueChanged<TranscriptionPerformance>
+      onTranscriptionPerformanceChanged;
   final ValueChanged<String?> onOpenBook;
 
   const _Boot({
@@ -203,6 +229,8 @@ class _Boot extends StatefulWidget {
     required this.onDefaultHighlightColorChanged,
     required this.swipeToFlipEnabled,
     required this.onSwipeToFlipChanged,
+    required this.transcriptionPerformance,
+    required this.onTranscriptionPerformanceChanged,
     required this.onOpenBook,
   });
 
@@ -253,6 +281,9 @@ class _BootState extends State<_Boot> {
           onDefaultHighlightColorChanged: widget.onDefaultHighlightColorChanged,
           swipeToFlipEnabled: widget.swipeToFlipEnabled,
           onSwipeToFlipChanged: widget.onSwipeToFlipChanged,
+          transcriptionPerformance: widget.transcriptionPerformance,
+          onTranscriptionPerformanceChanged:
+              widget.onTranscriptionPerformanceChanged,
           onOpenBook: widget.onOpenBook,
         );
       },

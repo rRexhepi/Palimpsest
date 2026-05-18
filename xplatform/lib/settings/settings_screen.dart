@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../annotations/annotation_types.dart';
 import '../main.dart' show AppThemeChoice;
 import '../theme.dart';
+import '../whisper/whisper_config.dart';
 import '../widgets/app_header.dart';
 import '../widgets/app_list.dart';
 import '../widgets/app_scaffold.dart';
@@ -18,6 +19,9 @@ class SettingsScreen extends StatelessWidget {
   final ValueChanged<HighlightColor> onDefaultHighlightColorChanged;
   final bool swipeToFlipEnabled;
   final ValueChanged<bool> onSwipeToFlipChanged;
+  final TranscriptionPerformance transcriptionPerformance;
+  final ValueChanged<TranscriptionPerformance>
+      onTranscriptionPerformanceChanged;
 
   const SettingsScreen({
     super.key,
@@ -29,6 +33,8 @@ class SettingsScreen extends StatelessWidget {
     required this.onDefaultHighlightColorChanged,
     required this.swipeToFlipEnabled,
     required this.onSwipeToFlipChanged,
+    required this.transcriptionPerformance,
+    required this.onTranscriptionPerformanceChanged,
   });
 
   static String _themeLabel(AppThemeChoice c) {
@@ -39,6 +45,42 @@ class SettingsScreen extends StatelessWidget {
         return 'Light';
       case AppThemeChoice.dark:
         return 'Dark';
+    }
+  }
+
+  static String _perfLabel(TranscriptionPerformance p) {
+    switch (p) {
+      case TranscriptionPerformance.max:
+        return 'Max';
+      case TranscriptionPerformance.balanced:
+        return 'Balanced';
+      case TranscriptionPerformance.light:
+        return 'Light';
+    }
+  }
+
+  static String _deviceSummary() {
+    final cores = Platform.numberOfProcessors;
+    final ram = WhisperConfig.totalRamMb;
+    if (ram == null) return 'Detected: $cores cores.';
+    final gb = (ram / 1024).toStringAsFixed(ram >= 4000 ? 0 : 1);
+    return 'Detected: $cores cores, $gb GB RAM.';
+  }
+
+  static String _perfSubtitle(TranscriptionPerformance p) {
+    final cfg = WhisperConfig.forLevel(p);
+    final totalThreads = cfg.workerCount * cfg.threadsPerWorker;
+    final ramMb = cfg.workerCount * 270;
+    switch (p) {
+      case TranscriptionPerformance.max:
+        return 'Fastest. ${cfg.workerCount} workers × '
+            '${cfg.threadsPerWorker} threads (~$ramMb MB RAM).';
+      case TranscriptionPerformance.balanced:
+        return 'Default. $totalThreads threads, single worker '
+            '(~$ramMb MB RAM). Phone stays responsive.';
+      case TranscriptionPerformance.light:
+        return 'Smallest footprint. 2 threads. Pick when running other '
+            'apps in the foreground.';
     }
   }
 
@@ -107,6 +149,41 @@ class SettingsScreen extends StatelessWidget {
               selected: defaultHighlightColor,
               onChanged: onDefaultHighlightColorChanged,
               colors: colors,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const AppSectionHeader('Transcription'),
+          AppListTile(
+            title: const Text('Performance'),
+            subtitle: Text(
+              '${_deviceSummary()} '
+              'Audiobook transcription uses Whisper on the CPU. Higher '
+              'levels run more threads in parallel — faster, but the '
+              'device runs hotter and other apps slow down.',
+              style: TextStyle(color: colors.inkMuted),
+            ),
+          ),
+          RadioGroup<TranscriptionPerformance>(
+            groupValue: transcriptionPerformance,
+            onChanged: (v) {
+              if (v != null) onTranscriptionPerformanceChanged(v);
+            },
+            child: Column(
+              children: [
+                for (final p in TranscriptionPerformance.values)
+                  AppListTile(
+                    leading: Radio<TranscriptionPerformance>(
+                      value: p,
+                      activeColor: colors.accent,
+                    ),
+                    title: Text(_perfLabel(p)),
+                    subtitle: Text(
+                      _perfSubtitle(p),
+                      style: TextStyle(color: colors.inkMuted),
+                    ),
+                    onTap: () => onTranscriptionPerformanceChanged(p),
+                  ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
