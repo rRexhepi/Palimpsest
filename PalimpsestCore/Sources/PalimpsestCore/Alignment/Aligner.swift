@@ -63,61 +63,82 @@ public struct WhisperAligner: AudioTextAligner {
         progress(.transcribing(snippet: nil, fraction: 0, etaSeconds: nil))
         let options = DecodingOptions(wordTimestamps: true)
 
-        let chunkLengthSeconds: Double = 30.0
+        // WhisperKit's window size; partial callbacks fire at this cadence.
+        let whisperWindowSeconds: Double = 30.0
+        // Audio-load chunk size. WhisperKit's transcribe(audioPath:) loads
+        // the entire file into a `[Float]` first, which OOM-aborts a
+        // multi-hour audiobook (10 hr @ 16 kHz mono Float32 ≈ 2.3 GB,
+        // past iPhone's per-process ceiling). Loading in 5-minute chunks
+        // keeps peak around ~19 MB per chunk.
+        let loadChunkSeconds: Double = 5 * 60
         let transcribeStart = Date()
 
-        let callback: TranscriptionCallback = { partial in
-            let snippet = String(partial.text.suffix(80))
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+        var audioWords: [AudioWord] = []
+        var loadCursor: Double = 0
+        while loadCursor < max(totalAudioSeconds, loadChunkSeconds) {
+            let chunkStart = loadCursor
+            let chunkEnd = totalAudioSeconds > 0
+                ? min(chunkStart + loadChunkSeconds, totalAudioSeconds)
+                : chunkStart + loadChunkSeconds
 
-            // windowId is 0-based; +1 = number of chunks processed.
-            let processedAudio = min(
-                totalAudioSeconds > 0 ? totalAudioSeconds : .infinity,
-                Double(partial.windowId + 1) * chunkLengthSeconds
-            )
-            let fraction: Double? = totalAudioSeconds > 0
-                ? min(1.0, processedAudio / totalAudioSeconds)
-                : nil
+            let callback: TranscriptionCallback = { partial in
+                let snippet = String(partial.text.suffix(80))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let processedAudio = min(
+                    totalAudioSeconds > 0 ? totalAudioSeconds : .infinity,
+                    chunkStart + Double(partial.windowId + 1) * whisperWindowSeconds
+                )
+                let fraction: Double? = totalAudioSeconds > 0
+                    ? min(1.0, processedAudio / totalAudioSeconds)
+                    : nil
+                let elapsed = Date().timeIntervalSince(transcribeStart)
+                let speed = elapsed > 0.5 ? processedAudio / elapsed : 0
+                let remainingAudio = max(0, totalAudioSeconds - processedAudio)
+                let eta: TimeInterval? = (speed > 0 && totalAudioSeconds > 0 && remainingAudio > 0)
+                    ? remainingAudio / speed
+                    : nil
+                progress(.transcribing(
+                    snippet: snippet.isEmpty ? nil : snippet,
+                    fraction: fraction,
+                    etaSeconds: eta
+                ))
+                return nil
+            }
 
-            let elapsed = Date().timeIntervalSince(transcribeStart)
-            let speed = elapsed > 0.5 ? processedAudio / elapsed : 0  // audio-sec per wall-sec
-            let remainingAudio = max(0, totalAudioSeconds - processedAudio)
-            let eta: TimeInterval? = (speed > 0 && totalAudioSeconds > 0 && remainingAudio > 0)
-                ? remainingAudio / speed
-                : nil
+            let chunkResults: [TranscriptionResult]
+            do {
+                let samples = try AudioProcessor.loadAudioAsFloatArray(
+                    fromPath: audioURL.path,
+                    startTime: chunkStart,
+                    endTime: chunkEnd
+                )
+                chunkResults = try await pipe.transcribe(
+                    audioArray: samples,
+                    decodeOptions: options,
+                    callback: callback
+                )
+            } catch {
+                throw AlignerError.transcriptionFailed(error.localizedDescription)
+            }
 
-            progress(.transcribing(
-                snippet: snippet.isEmpty ? nil : snippet,
-                fraction: fraction,
-                etaSeconds: eta
-            ))
-            return nil
-        }
+            for result in chunkResults {
+                for seg in result.segments {
+                    for word in (seg.words ?? []) {
+                        audioWords.append(AudioWord(
+                            text: normalizeWord(word.word),
+                            startSeconds: Double(word.start) + chunkStart,
+                            endSeconds: Double(word.end) + chunkStart,
+                            confidence: Float(word.probability)
+                        ))
+                    }
+                }
+            }
 
-        let results: [TranscriptionResult]
-        do {
-            results = try await pipe.transcribe(
-                audioPath: audioURL.path,
-                decodeOptions: options,
-                callback: callback
-            )
-        } catch {
-            throw AlignerError.transcriptionFailed(error.localizedDescription)
+            loadCursor = chunkEnd
+            if totalAudioSeconds <= 0 { break }
         }
 
         progress(.aligning)
-        let audioWords = results.flatMap { result in
-            result.segments.flatMap { (seg: TranscriptionSegment) -> [AudioWord] in
-                (seg.words ?? []).map { word in
-                    AudioWord(
-                        text: normalizeWord(word.word),
-                        startSeconds: Double(word.start),
-                        endSeconds: Double(word.end),
-                        confidence: Float(word.probability)
-                    )
-                }
-            }
-        }
 
         let map = alignWords(audio: audioWords, segments: input.segments)
         progress(.complete(wordsAligned: map.words.count, sentencesAligned: map.sentences.count))
