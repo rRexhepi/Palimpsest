@@ -35,9 +35,9 @@
 		11112A4CFA44B2BBA9A1A562 /* AudioBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBarView.swift; sourceTree = "<group>"; };
 		1CA103ED9E54FADD14E2560B /* HighlightableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightableTextView.swift; sourceTree = "<group>"; };
 		291D8FBF8930897384E49916 /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
-		3F480532410A8E3B93C3C665 /* PalimpsestiOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PalimpsestiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F480532410A8E3B93C3C665 /* Palimpsest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Palimpsest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5B7FC8B6073EE474B9981B81 /* AudioBarTouchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBarTouchView.swift; sourceTree = "<group>"; };
-		687FA3EA18F8D2FBB1DE434A /* PalimpsestCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = PalimpsestCore; path = PalimpsestCore; sourceTree = SOURCE_ROOT; };
+		687FA3EA18F8D2FBB1DE434A /* PalimpsestCore */ = {isa = PBXFileReference; lastKnownFileType = folder; path = PalimpsestCore; sourceTree = SOURCE_ROOT; };
 		6AAD2F302BBE580BBC5B245C /* DogEarPageTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogEarPageTurn.swift; sourceTree = "<group>"; };
 		7313C39961926BDAD3FBA26C /* Palimpsest.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Palimpsest.entitlements; sourceTree = "<group>"; };
 		7AE02E4C8321B7B7517AC5A3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -53,7 +53,7 @@
 		E12A672259931B140AB3EF50 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LibraryView.swift; sourceTree = "<group>"; };
 		E4CD248F5BEB9F630D7341BB /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		F09EAB889CF35D567E3A93E7 /* PlatformImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformImage.swift; sourceTree = "<group>"; };
-		F30EF32DD0942713A3E166DA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		F30EF32DD0942713A3E166DA /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		FDEEEF08122F75E22ADE8E7E /* PalimpsestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalimpsestApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -126,7 +126,7 @@
 		DCE5B8321F60997BF943FC88 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3F480532410A8E3B93C3C665 /* PalimpsestiOS.app */,
+				3F480532410A8E3B93C3C665 /* Palimpsest.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -151,7 +151,7 @@
 				6B9910A9D14C1F86F1DEA016 /* PalimpsestCore */,
 			);
 			productName = PalimpsestiOS;
-			productReference = 3F480532410A8E3B93C3C665 /* PalimpsestiOS.app */;
+			productReference = 3F480532410A8E3B93C3C665 /* Palimpsest.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -161,10 +161,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					B055FD2DB6974F61A24884F8 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -269,6 +268,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HA8444ZZH2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -292,6 +292,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -305,9 +306,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/Palimpsest.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/InfoiOS.plist;
@@ -316,7 +316,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rexhep.Palimpsest;
 				PRODUCT_NAME = Palimpsest;
 				SDKROOT = iphoneos;
@@ -365,6 +365,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HA8444ZZH2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -381,6 +382,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -394,9 +396,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/Palimpsest.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/InfoiOS.plist;
@@ -405,7 +406,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.1;
+				MARKETING_VERSION = 0.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rexhep.Palimpsest;
 				PRODUCT_NAME = Palimpsest;
 				SDKROOT = iphoneos;
