@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Ink and Echo">
+  <defs>
+    <filter id="paper" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.7" numOctaves="2" seed="7" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.04 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+    </filter>
+    <filter id="bleed" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="3"/>
+      <feDisplacementMap in="SourceGraphic" scale="9"/>
+    </filter>
+    <radialGradient id="vig" cx="50%" cy="50%" r="62%">
+      <stop offset="60%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#7a5a25" stop-opacity="0.07"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#8B5A2B" stop-opacity="0.18"/>
+      <stop offset="55%" stop-color="#8B5A2B" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#8B5A2B" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="dotcore" cx="48%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#6F4520" stop-opacity="0.55"/>
+      <stop offset="60%" stop-color="#6F4520" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="1024" height="1024" fill="#FBF7EE"/>
+  <rect x="0" y="0" width="1024" height="1024" fill="#000" filter="url(#paper)"/>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#vig)"/>
+
+  <g fill="none" stroke="#8B5A2B" style="mix-blend-mode: multiply">
+    <circle cx="512" cy="612" r="158" stroke-width="3.4" opacity="0.46"/>
+    <circle cx="512" cy="612" r="252" stroke-width="2.4" opacity="0.28"/>
+    <circle cx="512" cy="612" r="348" stroke-width="1.6" opacity="0.14"/>
+  </g>
+
+  <circle cx="512" cy="624" r="110" fill="url(#halo)"/>
+
+  <g filter="url(#bleed)">
+    <circle cx="512" cy="626" r="50" fill="#8B5A2B"/>
+  </g>
+  <circle cx="512" cy="626" r="50" fill="url(#dotcore)"/>
+
+  <g transform="rotate(-6 512 612)">
+    <g filter="url(#bleed)">
+      <path d="M 436 196 C 428 196, 424 204, 426 218 C 420 296, 420 386, 434 470 C 450 538, 476 580, 512 612 C 548 580, 574 538, 590 470 C 604 386, 604 296, 598 218 C 600 204, 596 196, 588 196 Z" fill="#1F1B16"/>
+    </g>
+    <line x1="512" y1="382" x2="512" y2="594" stroke="#FBF7EE" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="512" cy="370" r="11" fill="#FBF7EE"/>
+  </g>
+</svg>

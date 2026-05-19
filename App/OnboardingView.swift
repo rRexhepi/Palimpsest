@@ -129,28 +129,16 @@ struct OnboardingView: View {
     // MARK: - Pieces
 
     private var logomark: some View {
-        ZStack(alignment: .bottom) {
-            VStack(spacing: 4) {
-                Text("P")
-                    .font(.system(size: 64, design: .serif))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Theme.ink)
-                Rectangle()
-                    .fill(Theme.accent)
-                    .frame(width: 38, height: 2)
-                    .clipShape(Capsule())
-                    .offset(x: -2)
-            }
-            .padding(.bottom, 4)
-        }
-        .frame(width: 96, height: 96)
-        .background(Theme.canvasCool)
-        .overlay(
-            RoundedRectangle(cornerRadius: 22)
-                .stroke(Theme.hairlineStrong, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
+        Image("InkAndEchoMark")
+            .resizable()
+            .scaledToFill()
+            .frame(width: 96, height: 96)
+            .clipShape(RoundedRectangle(cornerRadius: 22))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(Theme.hairlineStrong, lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.18), radius: 12, x: 0, y: 6)
     }
 
     private func onboardingCell(n: Int, title: String, body: String) -> some View {
