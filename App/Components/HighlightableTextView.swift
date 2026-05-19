@@ -151,6 +151,31 @@ struct HighlightableTextView: UIViewRepresentable {
             super.touchesCancelled(touches, with: event)
         }
 
+        override func editMenu(
+            for textRange: UITextRange,
+            suggestedActions: [UIMenuElement]
+        ) -> UIMenu? {
+            let nsRange = self.nsRange(for: textRange)
+            let words = wordRanges
+                .filter { NSIntersectionRange($0.range, nsRange).length > 0 }
+                .map(\.localIndex)
+            var actions = suggestedActions
+            if !words.isEmpty, let paint = onPaintWord {
+                let highlight = UIAction(title: "Highlight") { [weak self] _ in
+                    for idx in words { paint(idx) }
+                    self?.selectedTextRange = nil
+                }
+                actions.insert(highlight, at: 0)
+            }
+            return UIMenu(children: actions)
+        }
+
+        private func nsRange(for textRange: UITextRange) -> NSRange {
+            let loc = offset(from: beginningOfDocument, to: textRange.start)
+            let len = offset(from: textRange.start, to: textRange.end)
+            return NSRange(location: loc, length: len)
+        }
+
         private func wordIndex(at point: CGPoint) -> Int? {
             guard let position = closestPosition(to: point) else { return nil }
             let offset = self.offset(from: beginningOfDocument, to: position)

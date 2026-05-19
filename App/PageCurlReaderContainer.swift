@@ -38,6 +38,12 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         if totalPages > 0 {
             setControllers(on: pvc, animated: false, direction: .forward)
         }
+        // UITextView (HighlightableTextView) inside each page has greedy
+        // selection recognizers that otherwise starve the curl pan; this
+        // delegate makes the curl recognize alongside them.
+        for g in pvc.gestureRecognizers {
+            g.delegate = context.coordinator
+        }
         applySwipeEnabled(to: pvc)
         // Deferred so the binding write happens after representable construction.
         DispatchQueue.main.async { [weak coord = context.coordinator] in
@@ -111,7 +117,7 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         Coordinator(parent: self)
     }
 
-    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+    final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
         let parent: PageCurlReaderContainer
         /// One-shot — consumed by the next `updateUIViewController` so
         /// chapter picks and progress restore still snap.
@@ -167,6 +173,23 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
             DispatchQueue.main.async {
                 self.parent.currentIndex = current.pageIndex
             }
+        }
+
+        // Allow the curl pan to coexist with UITextView's selection
+        // gestures; otherwise the text view eats every touch.
+        func gestureRecognizer(
+            _ g: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
+
+        // Sustained long-press is text selection, not a curl.
+        func gestureRecognizer(
+            _ g: UIGestureRecognizer,
+            shouldRequireFailureOf other: UIGestureRecognizer
+        ) -> Bool {
+            other is UILongPressGestureRecognizer
         }
     }
 }
