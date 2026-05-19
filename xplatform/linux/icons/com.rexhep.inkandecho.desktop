@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Ink and Echo
+GenericName=Audiobook + Ebook Reader
+Comment=An audiobook reader that knows where you are in the text.
+Exec=ink_and_echo
+Icon=com.rexhep.inkandecho
+Terminal=false
+Categories=AudioVideo;Audio;Office;Viewer;
+StartupWMClass=ink_and_echo
+Keywords=audiobook;ebook;reader;palimpsest;
