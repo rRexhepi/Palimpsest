@@ -35,9 +35,9 @@
 		03A1AB50F8D3B4289C8EAEE6 /* PlatformImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformImage.swift; sourceTree = "<group>"; };
 		12A7C200EA73136ABF2B9E9F /* BookFileResolution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookFileResolution.swift; sourceTree = "<group>"; };
 		1572B6E8AB476A5B2527608D /* AlignmentCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignmentCoordinator.swift; sourceTree = "<group>"; };
-		172CE85348873DECD40D1E55 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		172CE85348873DECD40D1E55 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		37A5A843C01544CD83F9B21F /* PageCurlReaderContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageCurlReaderContainer.swift; sourceTree = "<group>"; };
-		4074DBB1CFAB9DC9D10C6C0E /* InkAndEchoiOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InkAndEchoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4074DBB1CFAB9DC9D10C6C0E /* InkAndEcho.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InkAndEcho.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418FCE68125418C6205A2B9B /* InfoiOS.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = InfoiOS.plist; sourceTree = "<group>"; };
 		5D6D732825890C6C364C9CCC /* AnnotationsListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnotationsListSheet.swift; sourceTree = "<group>"; };
 		6375515AC3F41DBA03C0DA29 /* AudioBarTouchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBarTouchView.swift; sourceTree = "<group>"; };
@@ -52,7 +52,7 @@
 		AA3F84C246400BD4A5B153EE /* HighlightableTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HighlightableTextView.swift; sourceTree = "<group>"; };
 		AFF009345723E68F5306F679 /* AlignmentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignmentService.swift; sourceTree = "<group>"; };
 		B1D5E859D5CC87449328CC69 /* DogEarPageTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DogEarPageTurn.swift; sourceTree = "<group>"; };
-		C1B14FAA2C38A4DB3FA4FCBA /* InkAndEchoCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = InkAndEchoCore; path = InkAndEchoCore; sourceTree = SOURCE_ROOT; };
+		C1B14FAA2C38A4DB3FA4FCBA /* InkAndEchoCore */ = {isa = PBXFileReference; lastKnownFileType = folder; path = InkAndEchoCore; sourceTree = SOURCE_ROOT; };
 		C4D405BF62C960DE1626F07F /* InkAndEcho.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = InkAndEcho.entitlements; sourceTree = "<group>"; };
 		D89DD8DB05E63EF2FDDC850B /* InkAndEchoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkAndEchoApp.swift; sourceTree = "<group>"; };
 		F34FE67BFB0A6FB7ED30611D /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -74,7 +74,7 @@
 		0B026DA018933BFA08B5B760 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				4074DBB1CFAB9DC9D10C6C0E /* InkAndEchoiOS.app */,
+				4074DBB1CFAB9DC9D10C6C0E /* InkAndEcho.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -154,7 +154,7 @@
 				1AF2409C020C4105069A06E6 /* InkAndEchoCore */,
 			);
 			productName = InkAndEchoiOS;
-			productReference = 4074DBB1CFAB9DC9D10C6C0E /* InkAndEchoiOS.app */;
+			productReference = 4074DBB1CFAB9DC9D10C6C0E /* InkAndEcho.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -164,10 +164,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
 					378FFC3A3A62E54F06C23281 = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -243,9 +242,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/InkAndEcho.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/InfoiOS.plist;
@@ -303,6 +301,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = HA8444ZZH2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -319,6 +318,7 @@
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -362,6 +362,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = HA8444ZZH2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -385,6 +386,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -398,9 +400,8 @@
 				CODE_SIGN_ENTITLEMENTS = App/InkAndEcho.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
-				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/InfoiOS.plist;

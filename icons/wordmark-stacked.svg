@@ -17,6 +17,12 @@
       <stop offset="0%" stop-color="#6F4520" stop-opacity="0.55"/>
       <stop offset="60%" stop-color="#6F4520" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="wms-silver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E2E0DA"/>
+      <stop offset="40%" stop-color="#B5B2A9"/>
+      <stop offset="72%" stop-color="#8C8980"/>
+      <stop offset="100%" stop-color="#9E9B92"/>
+    </linearGradient>
   </defs>
 
   <g clip-path="url(#wms-clip)">
@@ -33,11 +39,11 @@
       </g>
       <circle cx="512" cy="626" r="50" fill="url(#wms-dotcore)"/>
       <g transform="rotate(-6 512 612)">
-        <g filter="url(#wms-bleed)">
-          <path d="M 436 196 C 428 196, 424 204, 426 218 C 420 296, 420 386, 434 470 C 450 538, 476 580, 512 612 C 548 580, 574 538, 590 470 C 604 386, 604 296, 598 218 C 600 204, 596 196, 588 196 Z" fill="#1F1B16"/>
-        </g>
-        <line x1="512" y1="382" x2="512" y2="594" stroke="#FBF7EE" stroke-width="14" stroke-linecap="round"/>
-        <circle cx="512" cy="370" r="14" fill="#FBF7EE"/>
+        <path d="M 432 44 L 384 282 Q 380 304 388 326 Q 488 462 512 612 Q 536 462 636 326 Q 644 304 640 282 L 592 44 Z" fill="url(#wms-silver)"/>
+        <rect x="422" y="60" width="180" height="24" rx="3" fill="#8B5A2B"/>
+        <path d="M 420 -60 L 604 -60 Q 601 2 602 64 L 422 64 Q 423 2 420 -60 Z" fill="#1F1B16"/>
+        <line x1="512" y1="342" x2="512" y2="600" stroke="#1F1B16" stroke-width="12" stroke-linecap="round"/>
+        <circle cx="512" cy="348" r="14" fill="#1F1B16"/>
       </g>
     </g>
   </g>
