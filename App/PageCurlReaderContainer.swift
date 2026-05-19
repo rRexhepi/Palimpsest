@@ -52,7 +52,15 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         pan.cancelsTouchesInView = false
         pvc.view.addGestureRecognizer(pan)
         context.coordinator.instantPan = pan
-        applyAnimationMode(to: pvc, instantPan: pan)
+        let tap = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleEdgeTap(_:))
+        )
+        tap.delegate = context.coordinator
+        tap.cancelsTouchesInView = false
+        pvc.view.addGestureRecognizer(tap)
+        context.coordinator.edgeTap = tap
+        applyAnimationMode(to: pvc, coordinator: context.coordinator)
         // Deferred so the binding write happens after representable construction.
         DispatchQueue.main.async { [weak coord = context.coordinator] in
             flipController = { forward in coord?.flipPage(forward: forward) }
@@ -60,11 +68,12 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         return pvc
     }
 
-    private func applyAnimationMode(to pvc: UIPageViewController, instantPan: UIPanGestureRecognizer?) {
+    private func applyAnimationMode(to pvc: UIPageViewController, coordinator: Coordinator) {
         for g in pvc.gestureRecognizers {
             g.isEnabled = animationsEnabled
         }
-        instantPan?.isEnabled = !animationsEnabled
+        coordinator.instantPan?.isEnabled = !animationsEnabled
+        coordinator.edgeTap?.isEnabled = !animationsEnabled
     }
 
     /// Mirror of `Theme.canvas` — UIKit needs `UIColor`. Keep in sync.
@@ -78,7 +87,7 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         // Coordinator's `parent` is captured at init — refresh so toggles
         // (animationsEnabled, etc.) reflect the latest struct snapshot.
         context.coordinator.parent = self
-        applyAnimationMode(to: pvc, instantPan: context.coordinator.instantPan)
+        applyAnimationMode(to: pvc, coordinator: context.coordinator)
         guard totalPages > 0 else { return }
         let safe = max(0, min(currentIndex, totalPages - 1))
         let visible = pvc.viewControllers?.compactMap { ($0 as? IndexedHostingController)?.pageIndex } ?? []
@@ -130,6 +139,7 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
         var parent: PageCurlReaderContainer
         weak var instantPan: UIPanGestureRecognizer?
+        weak var edgeTap: UITapGestureRecognizer?
         /// One-shot — consumed by the next `updateUIViewController` so
         /// chapter picks and progress restore still snap.
         private var pendingAnimatedFlip = false
@@ -146,6 +156,17 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
                 flipPage(forward: true)
             } else if dx > threshold {
                 flipPage(forward: false)
+            }
+        }
+
+        @objc func handleEdgeTap(_ g: UITapGestureRecognizer) {
+            guard let view = g.view else { return }
+            let p = g.location(in: view)
+            let edge: CGFloat = 24
+            if p.x < edge {
+                flipPage(forward: false)
+            } else if p.x > view.bounds.width - edge {
+                flipPage(forward: true)
             }
         }
 
@@ -220,6 +241,25 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
             guard g === instantPan, let pan = g as? UIPanGestureRecognizer else { return true }
             let v = pan.velocity(in: pan.view)
             return abs(v.x) > abs(v.y)
+        }
+
+        // Edge tap defers to any subview that owns its own gesture
+        // recognizer (⋯ menu, text view), so its only field of action is
+        // empty page area on the outer 24pt.
+        func gestureRecognizer(
+            _ g: UIGestureRecognizer,
+            shouldReceive touch: UITouch
+        ) -> Bool {
+            guard g === edgeTap, let container = g.view else { return true }
+            var v: UIView? = touch.view
+            while let cur = v, cur !== container {
+                if let rs = cur.gestureRecognizers,
+                   rs.contains(where: { $0 !== g && $0.isEnabled }) {
+                    return false
+                }
+                v = cur.superview
+            }
+            return true
         }
     }
 }
