@@ -74,6 +74,44 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UIBackgroundModes:
           - audio
+        # App only uses Apple-provided TLS via URLSession; exempt under
+        # the "uses only crypto built into the OS" clause. Declaring it
+        # here so App Store Connect stops prompting on every upload.
+        ITSAppUsesNonExemptEncryption: false
+        NSHumanReadableCopyright: "Copyright © 2026 Rexhep Rexhepi"
+        # Register as an opener for ebook + audiobook file types so
+        # "Open in…" from Files / Mail / Safari surfaces Ink and Echo.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: EPUB Book
+            LSHandlerRank: Default
+            LSItemContentTypes:
+              - org.idpf.epub-container
+          - CFBundleTypeName: PDF
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.adobe.pdf
+          - CFBundleTypeName: Audiobook
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.apple.m4a-audio
+              - public.mp3
+          - CFBundleTypeName: MOBI Book
+            LSHandlerRank: Default
+            LSItemContentTypes:
+              - com.rexhep.inkandecho.mobi
+        # MOBI / PRC / AZW share one UTI; system doesn't have a built-in.
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: com.rexhep.inkandecho.mobi
+            UTTypeDescription: Mobipocket eBook
+            UTTypeConformsTo:
+              - public.data
+            UTTypeTagSpecification:
+              public.filename-extension:
+                - mobi
+                - prc
+                - azw
+              public.mime-type:
+                - application/x-mobipocket-ebook
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rexhep.InkAndEcho
