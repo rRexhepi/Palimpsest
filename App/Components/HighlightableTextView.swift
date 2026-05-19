@@ -12,6 +12,8 @@ struct HighlightableTextView: UIViewRepresentable {
     let onToggleWord: (Int) -> Void
     let onPaintWord: (Int) -> Void
 
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
     func makeUIView(context: Context) -> InnerTextView {
         let v = InnerTextView()
         v.isEditable = false
@@ -28,6 +30,7 @@ struct HighlightableTextView: UIViewRepresentable {
         v.dataDetectorTypes = []
         v.setContentCompressionResistancePriority(.required, for: .vertical)
         v.setContentHuggingPriority(.required, for: .vertical)
+        v.delegate = context.coordinator
         return v
     }
 
@@ -36,6 +39,29 @@ struct HighlightableTextView: UIViewRepresentable {
         v.onToggleWord = onToggleWord
         v.onPaintWord = onPaintWord
         v.applyAttributedString(attributedString)
+    }
+
+    /// `textView(_:editMenuForTextIn:suggestedActions:)` is the documented
+    /// hook for adding actions to the system selection menu; overriding
+    /// `editMenu(...)` on the UITextView subclass compiles but isn't what
+    /// iOS calls.
+    final class Coordinator: NSObject, UITextViewDelegate {
+        func textView(
+            _ textView: UITextView,
+            editMenuForTextIn range: NSRange,
+            suggestedActions: [UIMenuElement]
+        ) -> UIMenu? {
+            guard let inner = textView as? InnerTextView else { return nil }
+            let words = inner.wordRanges
+                .filter { NSIntersectionRange($0.range, range).length > 0 }
+                .map(\.localIndex)
+            guard !words.isEmpty, let paint = inner.onPaintWord else { return nil }
+            let highlight = UIAction(title: "Highlight") { [weak inner] _ in
+                for idx in words { paint(idx) }
+                inner?.selectedTextRange = nil
+            }
+            return UIMenu(children: [highlight] + suggestedActions)
+        }
     }
 
     final class InnerTextView: UITextView {
@@ -149,31 +175,6 @@ struct HighlightableTextView: UIViewRepresentable {
             visited.removeAll()
             inDragSession = false
             super.touchesCancelled(touches, with: event)
-        }
-
-        override func editMenu(
-            for textRange: UITextRange,
-            suggestedActions: [UIMenuElement]
-        ) -> UIMenu? {
-            let nsRange = self.nsRange(for: textRange)
-            let words = wordRanges
-                .filter { NSIntersectionRange($0.range, nsRange).length > 0 }
-                .map(\.localIndex)
-            var actions = suggestedActions
-            if !words.isEmpty, let paint = onPaintWord {
-                let highlight = UIAction(title: "Highlight") { [weak self] _ in
-                    for idx in words { paint(idx) }
-                    self?.selectedTextRange = nil
-                }
-                actions.insert(highlight, at: 0)
-            }
-            return UIMenu(children: actions)
-        }
-
-        private func nsRange(for textRange: UITextRange) -> NSRange {
-            let loc = offset(from: beginningOfDocument, to: textRange.start)
-            let len = offset(from: textRange.start, to: textRange.end)
-            return NSRange(location: loc, length: len)
         }
 
         private func wordIndex(at point: CGPoint) -> Int? {

@@ -56,27 +56,6 @@ extension ReaderView {
                 // but the page looks unchanged until you flip away and back
                 // — or worse, until you relaunch the app.
                 .id("curl-\(useSpread ? "spread" : "single")-\(flatBoundariesBudget)-\(segments.count)-\(annotationRevision)")
-                // Tap-to-flip overlay — only the outer ~18% of each edge.
-                // The middle ~64% passes taps straight through to the
-                // page surface (`⋯` menus, paragraph long-press, text
-                // selection). Without the middle dead zone, every tap on
-                // a paragraph's ellipsis button got eaten as a forward
-                // flip.
-                .overlay(GeometryReader { geo in
-                    let edge = max(48, geo.size.width * 0.18)
-                    HStack(spacing: 0) {
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .frame(width: edge)
-                            .onTapGesture { iosFlipController?(false) }
-                        Spacer(minLength: 0)
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .frame(width: edge)
-                            .onTapGesture { iosFlipController?(true) }
-                    }
-                    .frame(width: geo.size.width, height: geo.size.height)
-                })
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
