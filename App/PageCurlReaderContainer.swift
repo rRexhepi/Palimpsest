@@ -46,14 +46,11 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         return pvc
     }
 
-    /// `UIPageViewController.pageCurl` exposes its swipe / pan via the PVC
-    /// view's gesture recognizers. Disabling them leaves edge taps + the
-    /// imperative flipController (arrow keys) as the remaining flip paths.
     private func applySwipeEnabled(to pvc: UIPageViewController) {
-        for g in pvc.view.gestureRecognizers ?? [] {
-            if g is UIPanGestureRecognizer || g is UIScreenEdgePanGestureRecognizer {
-                g.isEnabled = swipeToFlipEnabled
-            }
+        // Page-curl's recognizers live on `pvc.gestureRecognizers`; the
+        // view's `gestureRecognizers` doesn't surface them.
+        for g in pvc.gestureRecognizers {
+            g.isEnabled = swipeToFlipEnabled
         }
     }
 
