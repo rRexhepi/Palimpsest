@@ -83,12 +83,10 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
-                #if targetEnvironment(macCatalyst)
                 Toggle("Swipe to flip pages", isOn: $swipeToFlipEnabled)
-                Text("Off by default on Mac so click-drag selects text. Arrow keys and edge taps still flip the page.")
+                Text("Off keeps drag free for text selection. Arrow keys and edge taps still flip the page.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                #endif
             }
 
             Section("Highlights") {

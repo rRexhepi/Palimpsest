@@ -41,7 +41,8 @@ extension ReaderView {
                     useSpread: useSpread,
                     pageBuilder: { idx in iosBuildPage(at: idx) },
                     flipController: $iosFlipController,
-                    swipeToFlipEnabled: swipeToFlipEnabled
+                    swipeToFlipEnabled: swipeToFlipEnabled,
+                    animationsEnabled: animationsEnabled
                 )
                 // Re-create the container whenever the boundary budget OR
                 // spread mode flips so UIPageViewController throws away its

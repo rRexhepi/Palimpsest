@@ -13,6 +13,11 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     /// When false, the PVC's built-in pan recognizers are disabled. Arrow
     /// keys and edge taps still flip; click-drag is free for text selection.
     var swipeToFlipEnabled: Bool = true
+    /// When false, programmatic flips (arrow keys, edge taps, chapter
+    /// pick) snap without the curl commit animation. Swipe-driven flips
+    /// still curl during the drag — that animation is intrinsic to
+    /// `UIPageViewController.pageCurl` and can't be unhooked separately.
+    var animationsEnabled: Bool = true
 
     func makeUIViewController(context: Context) -> UIPageViewController {
         let options: [UIPageViewController.OptionsKey: Any] = useSpread
@@ -122,7 +127,7 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         func flipPage(forward: Bool) {
             let target = forward ? parent.currentIndex + 1 : parent.currentIndex - 1
             guard target >= 0, target < parent.totalPages else { return }
-            pendingAnimatedFlip = true
+            pendingAnimatedFlip = parent.animationsEnabled
             parent.currentIndex = target
         }
 

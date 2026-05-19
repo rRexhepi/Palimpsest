@@ -15,7 +15,12 @@ struct HighlightableTextView: UIViewRepresentable {
     func makeUIView(context: Context) -> InnerTextView {
         let v = InnerTextView()
         v.isEditable = false
-        v.isSelectable = false
+        // `isSelectable = true` enables the system long-press → loupe →
+        // Copy / Look Up / Translate menu on a per-word basis. Our
+        // overridden touchesBegan/Moved/Ended still see the touch first;
+        // a quick tap fires `onToggleWord`, a sustained press hands off
+        // to UIKit's selection gesture.
+        v.isSelectable = true
         v.isScrollEnabled = false
         v.backgroundColor = .clear
         v.textContainerInset = .zero
