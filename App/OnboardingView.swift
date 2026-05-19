@@ -35,7 +35,9 @@ struct OnboardingView: View {
             Spacer()
             logomark
             VStack(spacing: 12) {
-                Text("Ink and Echo")
+                (Text("Ink ")
+                    + Text("and").italic().foregroundColor(Theme.accent)
+                    + Text(" Echo"))
                     .font(.system(size: 32, design: .serif))
                     .fontWeight(.semibold)
                     .foregroundStyle(Theme.ink)
