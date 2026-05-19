@@ -10,12 +10,9 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     let pageBuilder: (Int) -> AnyView
     /// Escape hatch for imperative animated flips. Snap flips go through `currentIndex`.
     @Binding var flipController: ((Bool) -> Void)?
-    /// When false, the PVC's built-in pan recognizers are disabled. Arrow
-    /// keys and edge taps still flip; click-drag is free for text selection.
-    var swipeToFlipEnabled: Bool = true
-    /// When false, programmatic flips (arrow keys, edge taps, chapter
-    /// pick) snap without the curl commit animation. Swipe-driven flips
-    /// still curl during the drag — that animation is intrinsic to
+    /// When false, programmatic flips (arrow keys, chapter pick) snap
+    /// without the curl commit animation. Swipe-driven flips still curl
+    /// during the drag — that animation is intrinsic to
     /// `UIPageViewController.pageCurl` and can't be unhooked separately.
     var animationsEnabled: Bool = true
 
@@ -44,20 +41,11 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         for g in pvc.gestureRecognizers {
             g.delegate = context.coordinator
         }
-        applySwipeEnabled(to: pvc)
         // Deferred so the binding write happens after representable construction.
         DispatchQueue.main.async { [weak coord = context.coordinator] in
             flipController = { forward in coord?.flipPage(forward: forward) }
         }
         return pvc
-    }
-
-    private func applySwipeEnabled(to pvc: UIPageViewController) {
-        // Page-curl's recognizers live on `pvc.gestureRecognizers`; the
-        // view's `gestureRecognizers` doesn't surface them.
-        for g in pvc.gestureRecognizers {
-            g.isEnabled = swipeToFlipEnabled
-        }
     }
 
     /// Mirror of `Theme.canvas` — UIKit needs `UIColor`. Keep in sync.
@@ -68,7 +56,6 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ pvc: UIPageViewController, context: Context) {
-        applySwipeEnabled(to: pvc)
         guard totalPages > 0 else { return }
         let safe = max(0, min(currentIndex, totalPages - 1))
         let visible = pvc.viewControllers?.compactMap { ($0 as? IndexedHostingController)?.pageIndex } ?? []

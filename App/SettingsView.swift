@@ -23,19 +23,8 @@ enum ThemeChoice: String, CaseIterable, Identifiable {
 enum AppSettings {
     static let themeKey = "inkandecho.theme"
     static let animationsEnabledKey = "inkandecho.animationsEnabled"
-    /// Defaults true everywhere except Mac Catalyst, where text-selection
-    /// drag conflicts with edge-pan-to-flip.
-    static let swipeToFlipEnabledKey = "inkandecho.swipeToFlipEnabled"
     /// Color applied when the user taps / drags to highlight a word.
     static let defaultHighlightColorKey = "inkandecho.defaultHighlightColor"
-
-    static var swipeToFlipDefault: Bool {
-        #if targetEnvironment(macCatalyst)
-        return false
-        #else
-        return true
-        #endif
-    }
 
     static func defaultHighlightColor() -> AnnotationColor {
         let raw = UserDefaults.standard.string(forKey: defaultHighlightColorKey) ?? AnnotationColor.amber.rawValue
@@ -46,7 +35,6 @@ enum AppSettings {
 struct SettingsView: View {
     @AppStorage(AppSettings.themeKey) private var themeRaw: String = ThemeChoice.system.rawValue
     @AppStorage(AppSettings.animationsEnabledKey) private var animationsEnabled: Bool = true
-    @AppStorage(AppSettings.swipeToFlipEnabledKey) private var swipeToFlipEnabled: Bool = AppSettings.swipeToFlipDefault
     @AppStorage(AppSettings.defaultHighlightColorKey) private var defaultHighlightColorRaw: String = AnnotationColor.amber.rawValue
 
     /// Theme value as the sheet was first opened. Used on iOS to detect
@@ -80,11 +68,6 @@ struct SettingsView: View {
 
                 Toggle("Page-turn animations", isOn: $animationsEnabled)
                 Text("Turn off if you prefer instant page changes.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-
-                Toggle("Swipe to flip pages", isOn: $swipeToFlipEnabled)
-                Text("Off keeps drag free for text selection. Arrow keys and edge taps still flip the page.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

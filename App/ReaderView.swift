@@ -65,7 +65,6 @@ struct ReaderView: View {
     /// alignment is running — the job will continue in the background
     /// either way, but the prompt is the only place the user learns that.
     @State var iosShowLeaveAlignmentConfirm: Bool = false
-    @AppStorage(AppSettings.swipeToFlipEnabledKey) var swipeToFlipEnabled: Bool = AppSettings.swipeToFlipDefault
     @State var iosDragProgress: Double = 0
     @State var iosDragDirection: DogEarPageTurn.Direction = .forward
     @State var iosDragActive: Bool = false
