@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 import InkAndEchoCore
+#if os(iOS)
+import UIKit
+#endif
 
 @MainActor
 struct AlignmentService {
@@ -9,6 +12,12 @@ struct AlignmentService {
     /// Runs the full alignment pipeline for a book that already has both an ebook
     /// and an audiobook attached. Saves the resulting `AlignmentMap` as JSON next
     /// to the book's other files and stores the URL on the `Book` row.
+    ///
+    /// Survives the screen locking or the app moving to background by
+    /// requesting a `UIApplication` background task and disabling the
+    /// idle timer for the duration. Force-quit (swipe-away in app
+    /// switcher) still kills the process — iOS doesn't offer any escape
+    /// hatch for that.
     func runAlignment(
         for book: Book,
         progress: @MainActor @escaping (AlignmentStage) -> Void = { _ in }
@@ -17,6 +26,27 @@ struct AlignmentService {
               let audioURL = book.resolvedAudiobookURL else {
             throw AlignmentServiceError.missingFiles
         }
+
+        #if os(iOS)
+        // Keep the screen awake so long alignments don't pause when the
+        // device auto-locks; restore on exit. `isIdleTimerDisabled` is
+        // device-wide while we hold it.
+        let priorIdleTimer = UIApplication.shared.isIdleTimerDisabled
+        UIApplication.shared.isIdleTimerDisabled = true
+        // Request a background task. If the user backgrounds the app or
+        // locks the screen anyway, iOS gives us a grace window (a few
+        // minutes) before suspending. Without this, suspension is
+        // immediate and the alignment job stalls.
+        let bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "InkAndEcho.alignment") {
+            // Expiration handler: iOS revoked the grace window. Nothing
+            // we can do but stop holding it; the in-flight Task will be
+            // suspended at the next await point.
+        }
+        defer {
+            UIApplication.shared.endBackgroundTask(bgTaskID)
+            UIApplication.shared.isIdleTimerDisabled = priorIdleTimer
+        }
+        #endif
 
         progress(.loadingModel(model: "parsing book"))
         guard let importer = EBookImporterRegistry.importer(for: ebookURL) else {
