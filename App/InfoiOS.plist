@@ -17,9 +17,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.2</string>
+	<string>0.1.3</string>
 	<key>CFBundleVersion</key>
-	<string>6</string>
+	<string>7</string>
 	<!-- App only uses Apple-provided TLS via URLSession; exempt under
 	     the "uses only crypto built into the OS" clause. Declaring it
 	     here so App Store Connect stops prompting on every upload. -->

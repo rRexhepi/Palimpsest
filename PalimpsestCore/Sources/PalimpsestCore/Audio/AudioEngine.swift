@@ -55,6 +55,30 @@ public final class AudioEngine {
         engine.attach(timePitch)
         engine.connect(player, to: timePitch, format: nil)
         engine.connect(timePitch, to: engine.mainMixerNode, format: nil)
+        Self.configureAudioSessionIfNeeded()
+    }
+
+    /// Without `.playback` category iOS defaults to `.soloAmbient`, which
+    /// honors the silent switch and refuses to route to the output device
+    /// for an AVAudioEngine — the engine "plays" but no sound emerges.
+    /// `.spokenAudio` mode is the correct profile for audiobooks: ducks
+    /// other audio appropriately and pairs with `UIBackgroundModes=audio`
+    /// for lock-screen playback.
+    private static var didConfigureSession = false
+    private static func configureAudioSessionIfNeeded() {
+        guard !didConfigureSession else { return }
+        didConfigureSession = true
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .spokenAudio, options: [])
+            try session.setActive(true, options: [])
+        } catch {
+            // Falling through is fine — playback will still attempt with
+            // whatever the system default is.
+            print("AudioEngine: AVAudioSession setup failed: \(error)")
+        }
+        #endif
     }
 
     public func load(url: URL) async throws {
