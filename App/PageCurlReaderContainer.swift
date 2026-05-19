@@ -10,10 +10,9 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     let pageBuilder: (Int) -> AnyView
     /// Escape hatch for imperative animated flips. Snap flips go through `currentIndex`.
     @Binding var flipController: ((Bool) -> Void)?
-    /// When false, programmatic flips (arrow keys, chapter pick) snap
-    /// without the curl commit animation. Swipe-driven flips still curl
-    /// during the drag — that animation is intrinsic to
-    /// `UIPageViewController.pageCurl` and can't be unhooked separately.
+    /// When false, PVC's built-in curl gestures are disabled and a custom
+    /// horizontal pan instant-flips the page. Programmatic flips also
+    /// drop the commit animation.
     var animationsEnabled: Bool = true
 
     func makeUIViewController(context: Context) -> UIPageViewController {
@@ -41,11 +40,31 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
         for g in pvc.gestureRecognizers {
             g.delegate = context.coordinator
         }
+        // Standby instant-pan: replaces the built-in curl when animations
+        // are off. The curl can't be turned off on `.pageCurl` itself, so
+        // we disable PVC's gestures and route swipes through this one,
+        // calling `setControllers(animated: false)` for an instant flip.
+        let pan = UIPanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleInstantPan(_:))
+        )
+        pan.delegate = context.coordinator
+        pan.cancelsTouchesInView = false
+        pvc.view.addGestureRecognizer(pan)
+        context.coordinator.instantPan = pan
+        applyAnimationMode(to: pvc, instantPan: pan)
         // Deferred so the binding write happens after representable construction.
         DispatchQueue.main.async { [weak coord = context.coordinator] in
             flipController = { forward in coord?.flipPage(forward: forward) }
         }
         return pvc
+    }
+
+    private func applyAnimationMode(to pvc: UIPageViewController, instantPan: UIPanGestureRecognizer?) {
+        for g in pvc.gestureRecognizers {
+            g.isEnabled = animationsEnabled
+        }
+        instantPan?.isEnabled = !animationsEnabled
     }
 
     /// Mirror of `Theme.canvas` — UIKit needs `UIColor`. Keep in sync.
@@ -56,6 +75,10 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ pvc: UIPageViewController, context: Context) {
+        // Coordinator's `parent` is captured at init — refresh so toggles
+        // (animationsEnabled, etc.) reflect the latest struct snapshot.
+        context.coordinator.parent = self
+        applyAnimationMode(to: pvc, instantPan: context.coordinator.instantPan)
         guard totalPages > 0 else { return }
         let safe = max(0, min(currentIndex, totalPages - 1))
         let visible = pvc.viewControllers?.compactMap { ($0 as? IndexedHostingController)?.pageIndex } ?? []
@@ -105,13 +128,25 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
     }
 
     final class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate, UIGestureRecognizerDelegate {
-        let parent: PageCurlReaderContainer
+        var parent: PageCurlReaderContainer
+        weak var instantPan: UIPanGestureRecognizer?
         /// One-shot — consumed by the next `updateUIViewController` so
         /// chapter picks and progress restore still snap.
         private var pendingAnimatedFlip = false
 
         init(parent: PageCurlReaderContainer) {
             self.parent = parent
+        }
+
+        @objc func handleInstantPan(_ g: UIPanGestureRecognizer) {
+            guard g.state == .ended, let view = g.view else { return }
+            let dx = g.translation(in: view).x
+            let threshold: CGFloat = 50
+            if dx < -threshold {
+                flipPage(forward: true)
+            } else if dx > threshold {
+                flipPage(forward: false)
+            }
         }
 
         func flipPage(forward: Bool) {
@@ -177,6 +212,14 @@ struct PageCurlReaderContainer: UIViewControllerRepresentable {
             shouldRequireFailureOf other: UIGestureRecognizer
         ) -> Bool {
             other is UILongPressGestureRecognizer
+        }
+
+        // Instant-pan only fires for mostly-horizontal motion so vertical
+        // drags (e.g. text selection) still reach the text view.
+        func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+            guard g === instantPan, let pan = g as? UIPanGestureRecognizer else { return true }
+            let v = pan.velocity(in: pan.view)
+            return abs(v.x) > abs(v.y)
         }
     }
 }
