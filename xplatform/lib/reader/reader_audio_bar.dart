@@ -4,7 +4,7 @@ part of 'reader_screen.dart';
 /// audio is attached or an attach prompt when none is. Desktop shows the
 /// full footer with cover art, transport, and rate / sleep / align pills.
 class ReaderAudioBar extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
+  final InkAndEchoAudioPlayer player;
   final StoredBook book;
   final bool hasAlignment;
   final bool isAligning;
@@ -55,7 +55,7 @@ enum _FooterAction { replace }
 
 class _AttachAudiobookBar extends StatelessWidget {
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _AttachAudiobookBar({required this.onTap, required this.colors});
 
   @override
@@ -110,10 +110,10 @@ class _AttachAudiobookBar extends StatelessWidget {
 }
 
 class _CompactAudioBar extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
+  final InkAndEchoAudioPlayer player;
   final bool hasAlignment;
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _CompactAudioBar({
     required this.player,
     required this.hasAlignment,
@@ -205,8 +205,8 @@ class _CompactAudioBar extends StatelessWidget {
 }
 
 class _MiniPlayBtn extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _MiniPlayBtn({required this.player, required this.colors});
 
   @override
@@ -231,14 +231,14 @@ class _MiniPlayBtn extends StatelessWidget {
   }
 }
 class _TabletAudioFooter extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
+  final InkAndEchoAudioPlayer player;
   final StoredBook book;
   final bool hasAlignment;
   final bool isAligning;
   final VoidCallback onAttach;
   final VoidCallback onAlign;
   final VoidCallback onReplaceAudio;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _TabletAudioFooter({
     required this.player,
     required this.book,
@@ -429,8 +429,8 @@ class _TabletAudioFooter extends StatelessWidget {
 }
 
 class _FooterRatePill extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _FooterRatePill({required this.player, required this.colors});
 
   @override
@@ -464,8 +464,8 @@ class _FooterRatePill extends StatelessWidget {
 }
 
 class _FooterSleepPill extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _FooterSleepPill({required this.player, required this.colors});
 
   @override
@@ -503,7 +503,7 @@ class _FooterAlignPill extends StatelessWidget {
   final bool hasAlignment;
   final bool isAligning;
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _FooterAlignPill({
     required this.hasAlignment,
     required this.isAligning,
@@ -569,7 +569,7 @@ class _FooterAlignPill extends StatelessWidget {
 // ---------------------------------------------------------------------------
 class _CoverThumb extends StatelessWidget {
   final StoredBook book;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _CoverThumb({required this.book, required this.colors});
 
   @override
@@ -621,7 +621,7 @@ class _PhaseTick extends StatelessWidget {
   final String label;
   final bool isActive;
   final bool isDone;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _PhaseTick({
     required this.label,
     required this.isActive,
@@ -666,7 +666,7 @@ class _PhaseTick extends StatelessWidget {
 class _FooterPill extends StatelessWidget {
   final String text;
   final IconData icon;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final bool active;
   const _FooterPill({
     required this.text,

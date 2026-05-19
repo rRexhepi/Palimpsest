@@ -18,7 +18,7 @@ class OnboardingSlide {
 const List<OnboardingSlide> kOnboardingSlides = [
   OnboardingSlide(
     kicker: 'Welcome',
-    title: 'Palimpsest',
+    title: 'Ink and Echo',
     body: 'An ebook + audiobook reader that keeps the page and the voice in sync.',
     icon: Icons.menu_book_outlined,
   ),
@@ -44,7 +44,7 @@ const List<OnboardingSlide> kOnboardingSlides = [
 
 class OnboardingSlideView extends StatelessWidget {
   final OnboardingSlide slide;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const OnboardingSlideView(
       {super.key, required this.slide, required this.colors});
 

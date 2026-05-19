@@ -33,7 +33,7 @@ class AudioWord {
       };
 }
 
-/// Pure-logic port of `WhisperAligner` from PalimpsestCore/Aligner.swift.
+/// Pure-logic port of `WhisperAligner` from InkAndEchoCore/Aligner.swift.
 /// Takes a Whisper transcript (already produced) and the source text
 /// segments, emits an AlignmentMap. No audio decoding, no FFI.
 ///

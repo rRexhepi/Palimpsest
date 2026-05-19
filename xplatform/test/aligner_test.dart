@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:palimpsest/alignment/aligner.dart';
-import 'package:palimpsest/alignment/alignment_types.dart';
+import 'package:ink_and_echo/alignment/aligner.dart';
+import 'package:ink_and_echo/alignment/alignment_types.dart';
 
 /// Build a synthetic narrator-as-Whisper word stream from sentence text.
 /// Each word lasts `wordSec`, gap of `gapSec` between.

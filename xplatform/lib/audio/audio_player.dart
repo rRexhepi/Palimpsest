@@ -20,7 +20,7 @@ String formatDuration(Duration d) {
 /// load file, play/pause, ±15 s skip, rate (with pitch preserved), position
 /// stream, total duration. Mirrors the surface of `AudioEngine.swift` from
 /// the Apple build.
-class PalimpsestAudioPlayer extends ChangeNotifier {
+class InkAndEchoAudioPlayer extends ChangeNotifier {
   // Cap ExoPlayer's buffers aggressively. Default `AndroidLoadControl`
   // has `targetBufferBytes: null` (unbounded inside the time window), and
   // for high-bitrate 25-hour audiobooks ExoPlayer's Mp4Extractor can
@@ -48,7 +48,7 @@ class PalimpsestAudioPlayer extends ChangeNotifier {
   StreamSubscription<Duration>? _positionSub;
   StreamSubscription<ja.PlayerState>? _stateSub;
 
-  PalimpsestAudioPlayer() {
+  InkAndEchoAudioPlayer() {
     _stateSub = _player.playerStateStream.listen((_) => notifyListeners());
     _positionSub = _player.positionStream.listen((_) => notifyListeners());
   }

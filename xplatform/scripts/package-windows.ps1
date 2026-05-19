@@ -29,7 +29,7 @@ if (-not $Version) {
   }
 }
 
-Say "Building Palimpsest $Version for Windows x64"
+Say "Building Ink and Echo $Version for Windows x64"
 & $flutter build windows --release
 if ($LASTEXITCODE -ne 0) { throw "flutter build failed" }
 
@@ -37,11 +37,11 @@ $dist = Join-Path $xplatform "dist"
 New-Item -ItemType Directory -Force $dist | Out-Null
 
 Say "Compiling installer with Inno Setup"
-$iss = Join-Path $xplatform "installer\palimpsest.iss"
+$iss = Join-Path $xplatform "installer\ink_and_echo.iss"
 & $iscc "/DAppVersion=$Version" $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed" }
 
-$output = Join-Path $dist "palimpsest-$Version-windows-x64.exe"
+$output = Join-Path $dist "ink_and_echo-$Version-windows-x64.exe"
 if (-not (Test-Path $output)) { throw "Expected installer not found: $output" }
 
 Say "Done"

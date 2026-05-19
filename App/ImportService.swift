@@ -1,7 +1,7 @@
 import Foundation
 import AVFoundation
 import SwiftData
-import PalimpsestCore
+import InkAndEchoCore
 
 @MainActor
 struct ImportService {
@@ -114,7 +114,7 @@ struct ImportService {
             appropriateFor: nil,
             create: true
         )
-        let dir = appSupport.appendingPathComponent("Palimpsest", isDirectory: true)
+        let dir = appSupport.appendingPathComponent("InkAndEcho", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
     }

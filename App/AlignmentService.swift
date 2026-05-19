@@ -1,6 +1,6 @@
 import Foundation
 import SwiftData
-import PalimpsestCore
+import InkAndEchoCore
 
 @MainActor
 struct AlignmentService {

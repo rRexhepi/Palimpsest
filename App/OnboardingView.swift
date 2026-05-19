@@ -3,7 +3,7 @@ import SwiftUI
 
 /// First-launch onboarding for iOS. Four screens: welcome (logomark +
 /// tagline), how-it-works (3 numbered steps), local-first privacy, and
-/// you're-set CTA. Persisted via `palimpsest.hasCompletedOnboarding` in
+/// you're-set CTA. Persisted via `inkandecho.hasCompletedOnboarding` in
 /// `LibraryView`. Triggers the import picker on completion.
 struct OnboardingView: View {
     let onFinish: () -> Void
@@ -35,7 +35,7 @@ struct OnboardingView: View {
             Spacer()
             logomark
             VStack(spacing: 12) {
-                Text("Palimpsest")
+                Text("Ink and Echo")
                     .font(.system(size: 32, design: .serif))
                     .fontWeight(.semibold)
                     .foregroundStyle(Theme.ink)
@@ -117,7 +117,7 @@ struct OnboardingView: View {
                 .font(.system(size: 32, design: .serif))
                 .fontWeight(.semibold)
                 .foregroundStyle(Theme.ink)
-            Text("Bring an ebook and an audiobook. Palimpsest will pair them on this device.")
+            Text("Bring an ebook and an audiobook. Ink and Echo will pair them on this device.")
                 .font(.system(size: 15, design: .serif))
                 .foregroundStyle(Theme.inkSoft)
                 .multilineTextAlignment(.center)

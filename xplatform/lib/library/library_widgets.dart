@@ -7,7 +7,7 @@ import '../theme.dart';
 import '../widgets/app_context_menu.dart';
 
 class LibraryEmptyState extends StatelessWidget {
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const LibraryEmptyState({super.key, required this.colors});
 
   @override
@@ -47,7 +47,7 @@ enum _BookAction { remove }
 
 class BookTile extends StatelessWidget {
   final StoredBook book;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final VoidCallback onTap;
   final VoidCallback onRemove;
   const BookTile({

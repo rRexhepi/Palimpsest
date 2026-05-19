@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-import PalimpsestCore
+import InkAndEchoCore
 
 struct ReaderView: View {
     let book: Book
@@ -41,8 +41,8 @@ struct ReaderView: View {
     /// app launch.
     @State var annotationRevision: Int = 0
 
-    @AppStorage("palimpsest.paginated") var paginated: Bool = true
-    @AppStorage("palimpsest.wordHighlighting") var wordHighlightingEnabled: Bool = false
+    @AppStorage("inkandecho.paginated") var paginated: Bool = true
+    @AppStorage("inkandecho.wordHighlighting") var wordHighlightingEnabled: Bool = false
     @AppStorage(AppSettings.animationsEnabledKey) var animationsEnabled: Bool = true
     @State var currentPageIndex: Int = 0
     @State var lastTurnedForward: Bool = true

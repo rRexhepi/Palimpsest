@@ -1,6 +1,6 @@
 #if os(iOS)
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 /// iOS layouts for `ReaderView`. Dispatches between iPhone (compact width)
 /// and iPad (regular width). Both layouts share the same underlying

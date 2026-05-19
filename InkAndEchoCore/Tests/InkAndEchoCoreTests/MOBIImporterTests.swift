@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import PalimpsestCore
+@testable import InkAndEchoCore
 
 @Test func decodesUncompressedTextRecord() throws {
     let bytes = SyntheticMOBI(

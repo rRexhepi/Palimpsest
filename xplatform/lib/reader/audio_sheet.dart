@@ -7,7 +7,7 @@ import '../theme.dart';
 
 /// Full-controls audio sheet that the compact bar expands into.
 class AudioSheet extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
+  final InkAndEchoAudioPlayer player;
   final StoredBook book;
   final bool hasAlignment;
   final bool isAligning;
@@ -169,7 +169,7 @@ class _CircleControl extends StatelessWidget {
   final IconData icon;
   final double size;
   final VoidCallback? onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _CircleControl({
     required this.icon,
     required this.size,
@@ -197,8 +197,8 @@ class _CircleControl extends StatelessWidget {
 }
 
 class _BigPlayBtn extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _BigPlayBtn({required this.player, required this.colors});
 
   @override
@@ -224,8 +224,8 @@ class _BigPlayBtn extends StatelessWidget {
 }
 
 class _RatePill extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _RatePill({required this.player, required this.colors});
 
   @override
@@ -258,8 +258,8 @@ class _RatePill extends StatelessWidget {
 }
 
 class _SleepPill extends StatelessWidget {
-  final PalimpsestAudioPlayer player;
-  final PalimpsestColors colors;
+  final InkAndEchoAudioPlayer player;
+  final InkAndEchoColors colors;
   const _SleepPill({required this.player, required this.colors});
 
   @override
@@ -298,7 +298,7 @@ class _AlignPill extends StatelessWidget {
   final bool hasAlignment;
   final bool isAligning;
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _AlignPill({
     required this.hasAlignment,
     required this.isAligning,
@@ -356,7 +356,7 @@ class _AlignPill extends StatelessWidget {
 class _Pill extends StatelessWidget {
   final String text;
   final IconData icon;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final bool active;
   const _Pill({
     required this.text,

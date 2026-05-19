@@ -1,5 +1,5 @@
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 enum ThemeChoice: String, CaseIterable, Identifiable {
     case system
@@ -21,13 +21,13 @@ enum ThemeChoice: String, CaseIterable, Identifiable {
 /// the property wrappers in any view; writes go straight to `UserDefaults`
 /// and propagate through SwiftUI automatically.
 enum AppSettings {
-    static let themeKey = "palimpsest.theme"
-    static let animationsEnabledKey = "palimpsest.animationsEnabled"
+    static let themeKey = "inkandecho.theme"
+    static let animationsEnabledKey = "inkandecho.animationsEnabled"
     /// Defaults true everywhere except Mac Catalyst, where text-selection
     /// drag conflicts with edge-pan-to-flip.
-    static let swipeToFlipEnabledKey = "palimpsest.swipeToFlipEnabled"
+    static let swipeToFlipEnabledKey = "inkandecho.swipeToFlipEnabled"
     /// Color applied when the user taps / drags to highlight a word.
-    static let defaultHighlightColorKey = "palimpsest.defaultHighlightColor"
+    static let defaultHighlightColorKey = "inkandecho.defaultHighlightColor"
 
     static var swipeToFlipDefault: Bool {
         #if targetEnvironment(macCatalyst)
@@ -144,7 +144,7 @@ struct SettingsView: View {
                     .font(.system(size: 18))
                     .foregroundStyle(Theme.accent)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Restart Palimpsest to apply.")
+                    Text("Restart Ink and Echo to apply.")
                         .font(.callout.weight(.semibold))
                         .foregroundStyle(Theme.ink)
                     Text("iOS doesn't refresh the theme of an open app. Tap the button to close it now, then reopen.")

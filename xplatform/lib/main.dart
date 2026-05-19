@@ -14,20 +14,20 @@ import 'state/library_store.dart';
 import 'theme.dart';
 import 'whisper/whisper_config.dart';
 
-const _kThemePref = 'palimpsest.theme';
-const _kLastBookPref = 'palimpsest.lastOpenedBookID';
-const _kOnboardedPref = 'palimpsest.hasCompletedOnboarding';
-const _kAnimationsPref = 'palimpsest.animationsEnabled';
-const _kHighlightColorPref = 'palimpsest.defaultHighlightColor';
-const _kSwipeToFlipPref = 'palimpsest.swipeToFlipEnabled';
-const _kTranscriptionPerfPref = 'palimpsest.transcriptionPerformance';
+const _kThemePref = 'inkandecho.theme';
+const _kLastBookPref = 'inkandecho.lastOpenedBookID';
+const _kOnboardedPref = 'inkandecho.hasCompletedOnboarding';
+const _kAnimationsPref = 'inkandecho.animationsEnabled';
+const _kHighlightColorPref = 'inkandecho.defaultHighlightColor';
+const _kSwipeToFlipPref = 'inkandecho.swipeToFlipEnabled';
+const _kTranscriptionPerfPref = 'inkandecho.transcriptionPerformance';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isAndroid || Platform.isIOS) {
     try {
       await JustAudioBackground.init(
-        androidNotificationChannelId: 'com.rexhep.palimpsest.audio',
+        androidNotificationChannelId: 'com.rexhep.inkandecho.audio',
         androidNotificationChannelName: 'Audiobook playback',
         androidNotificationOngoing: true,
       );
@@ -42,19 +42,19 @@ Future<void> main() async {
     // events get dropped and the UI never advances past "Preparing…".
     FlutterForegroundTask.initCommunicationPort();
   }
-  runApp(const PalimpsestApp());
+  runApp(const InkAndEchoApp());
 }
 
 enum AppThemeChoice { system, light, dark }
 
-class PalimpsestApp extends StatefulWidget {
-  const PalimpsestApp({super.key});
+class InkAndEchoApp extends StatefulWidget {
+  const InkAndEchoApp({super.key});
 
   @override
-  State<PalimpsestApp> createState() => _PalimpsestAppState();
+  State<InkAndEchoApp> createState() => _InkAndEchoAppState();
 }
 
-class _PalimpsestAppState extends State<PalimpsestApp> {
+class _InkAndEchoAppState extends State<InkAndEchoApp> {
   final _store = LibraryStore();
   AppThemeChoice _theme = AppThemeChoice.system;
   bool _bootstrapped = false;
@@ -177,7 +177,7 @@ class _PalimpsestAppState extends State<PalimpsestApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Palimpsest',
+      title: 'Ink and Echo',
       debugShowCheckedModeBanner: false,
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),

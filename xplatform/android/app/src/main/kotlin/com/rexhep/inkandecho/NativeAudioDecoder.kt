@@ -1,4 +1,4 @@
-package com.rexhep.palimpsest
+package com.rexhep.inkandecho
 
 import android.media.MediaCodec
 import android.media.MediaExtractor
@@ -24,7 +24,7 @@ import java.nio.ByteOrder
 // MediaExtractor / MediaCodec are platform APIs available since API 16 —
 // no third-party native dep, no 16 KB page-size compliance work to chase.
 object NativeAudioDecoder {
-    const val CHANNEL = "palimpsest/native_decoder"
+    const val CHANNEL = "inkandecho/native_decoder"
     private const val TIMEOUT_US = 10_000L
 
     fun handle(call: MethodCall, result: MethodChannel.Result) {

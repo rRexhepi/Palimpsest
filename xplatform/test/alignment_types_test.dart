@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:palimpsest/alignment/alignment_types.dart';
+import 'package:ink_and_echo/alignment/alignment_types.dart';
 
 void main() {
   group('AlignmentMap', () {

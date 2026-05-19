@@ -1,11 +1,11 @@
-# Palimpsest
+# Ink and Echo
 
 An audiobook + ebook sync reader. Plays an audiobook and its matching
 ebook side-by-side, follows the narration with word- or sentence-level
 highlighting, and lets you annotate freely.
 
 Install instructions for end users live at
-https://rrexhepi.github.io/palimpsest-app/
+https://rrexhepi.github.io/ink-and-echo-app/
 
 ## Surfaces
 
@@ -14,7 +14,7 @@ and on-disk model but otherwise don't share code.
 
 | Surface | Targets | Lives in |
 |---|---|---|
-| Apple (Catalyst) | iPhone, iPad, Mac | `App/` + `PalimpsestCore/` + `Palimpsest.xcodeproj` |
+| Apple (Catalyst) | iPhone, iPad, Mac | `App/` + `InkAndEchoCore/` + `InkAndEcho.xcodeproj` |
 | Flutter port | Android, Windows, Linux | `xplatform/` |
 
 The Apple build is the reference UI and is distributed via TestFlight.
@@ -23,15 +23,15 @@ and import paths.
 
 ## Apple build
 
-Open the Xcode project and run the `Palimpsest` scheme:
+Open the Xcode project and run the `InkAndEchoiOS` scheme:
 
 ```bash
-open Palimpsest.xcodeproj
+open InkAndEcho.xcodeproj
 ```
 
 Apple silicon and Intel both build. The app is sandboxed and ad-hoc
 signed, so it runs without an Apple Developer Team. To regenerate
-`Palimpsest.xcodeproj` from `project.yml`:
+`InkAndEcho.xcodeproj` from `project.yml`:
 
 ```bash
 brew install xcodegen
@@ -41,7 +41,7 @@ xcodegen generate
 Core library tests:
 
 ```bash
-cd PalimpsestCore && swift test
+cd InkAndEchoCore && swift test
 ```
 
 ## Flutter port

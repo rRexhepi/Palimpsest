@@ -1,6 +1,6 @@
 #if os(iOS)
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 /// Touch-friendly audio bar used by the iOS reader. Big circular play
 /// button, mono-digit time stamps, accent scrubber, and a row of pills

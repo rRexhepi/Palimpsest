@@ -141,7 +141,7 @@ class _ParagraphRow extends StatelessWidget {
   final bool isContinuationStart;
   final bool isContinuationEnd;
   final List<Annotation> marks;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final ValueChanged<Offset> onMenu;
   final void Function(_ParaActionType type, int start, int end, String quote)?
       onSelectionAction;
@@ -348,7 +348,7 @@ List<TextSpan> _composeSpans(
 
 class _AlignBanner extends StatefulWidget {
   final AlignStage stage;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _AlignBanner({required this.stage, required this.colors});
 
   @override
@@ -528,7 +528,7 @@ class _SelectionMenu extends StatelessWidget {
   final List<Annotation> existing;
   final double tipDx;
   final bool tipUp;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
 
   const _SelectionMenu({
     required this.hasAlignment,
@@ -676,7 +676,7 @@ String _removalLabel(Annotation a) {
 }
 
 class _TipPainter extends CustomPainter {
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final double dx;
   final bool up;
   _TipPainter({required this.colors, required this.dx, required this.up});
@@ -715,7 +715,7 @@ class _MenuRow extends StatelessWidget {
   final bool destructive;
   final bool disabled;
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _MenuRow({
     required this.icon,
     required this.label,
@@ -895,7 +895,7 @@ class _AnnotationsSheet extends StatelessWidget {
 
 class _IconForKind extends StatelessWidget {
   final Annotation a;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _IconForKind({required this.a, required this.colors});
 
   @override
@@ -927,7 +927,7 @@ class _IconForKind extends StatelessWidget {
 class _AlignmentFullscreen extends StatefulWidget {
   final StoredBook book;
   final AlignStage stage;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final VoidCallback onContinueInBackground;
   const _AlignmentFullscreen({
     required this.book,

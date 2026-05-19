@@ -15,7 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:palimpsest/reader/curl_page_view.dart';
+import 'package:ink_and_echo/reader/curl_page_view.dart';
 
 const _outDir = '/tmp/curl-frames';
 

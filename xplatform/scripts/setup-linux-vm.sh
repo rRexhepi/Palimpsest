@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap a Ubuntu 22.04+ / Debian 12+ VM for building Palimpsest (Flutter
+# Bootstrap a Ubuntu 22.04+ / Debian 12+ VM for building Ink and Echo (Flutter
 # Linux desktop). Idempotent — safe to re-run. Run from inside the VM.
 #
 # Usage:

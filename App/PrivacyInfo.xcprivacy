@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Palimpsest does not track users across apps and websites owned
+    <!-- Ink and Echo does not track users across apps and websites owned
          by other companies. All transcription, alignment, and notes
          happen on-device. No analytics SDKs, no ad networks. -->
     <key>NSPrivacyTracking</key>

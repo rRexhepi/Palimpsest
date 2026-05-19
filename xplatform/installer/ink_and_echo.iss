@@ -1,16 +1,16 @@
-; Inno Setup script for the Palimpsest Windows desktop build.
+; Inno Setup script for the Ink and Echo Windows desktop build.
 ; Paths are relative to this file (xplatform\installer\).
 ; Drive the version from the command line:
-;   ISCC /DAppVersion=1.0.0 palimpsest.iss
+;   ISCC /DAppVersion=1.0.0 ink_and_echo.iss
 
 #ifndef AppVersion
   #define AppVersion "1.0.0"
 #endif
 
-#define MyAppName "Palimpsest"
+#define MyAppName "Ink and Echo"
 #define MyAppPublisher "Rexhep Rexhepi"
-#define MyAppURL "https://github.com/rRexhepi/Palimpsest"
-#define MyAppExeName "palimpsest.exe"
+#define MyAppURL "https://github.com/rRexhepi/InkAndEcho"
+#define MyAppExeName "ink_and_echo.exe"
 
 [Setup]
 AppId={{5D0260C1-EFFC-4E5C-948D-4518EE4BA7FA}
@@ -27,7 +27,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\dist
-OutputBaseFilename=palimpsest-{#AppVersion}-windows-x64
+OutputBaseFilename=ink_and_echo-{#AppVersion}-windows-x64
 SetupIconFile=..\windows\runner\resources\app_icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2

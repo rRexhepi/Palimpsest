@@ -2,13 +2,13 @@
 import PackageDescription
 
 let package = Package(
-    name: "PalimpsestCore",
+    name: "InkAndEchoCore",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
     ],
     products: [
-        .library(name: "PalimpsestCore", targets: ["PalimpsestCore"]),
+        .library(name: "InkAndEchoCore", targets: ["InkAndEchoCore"]),
     ],
     dependencies: [
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.19"),
@@ -16,12 +16,12 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "PalimpsestCore",
+            name: "InkAndEchoCore",
             dependencies: [
                 .product(name: "ZIPFoundation", package: "ZIPFoundation"),
                 .product(name: "WhisperKit", package: "WhisperKit"),
             ]
         ),
-        .testTarget(name: "PalimpsestCoreTests", dependencies: ["PalimpsestCore"]),
+        .testTarget(name: "InkAndEchoCoreTests", dependencies: ["InkAndEchoCore"]),
     ]
 )

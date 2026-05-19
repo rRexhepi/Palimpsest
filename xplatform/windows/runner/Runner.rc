@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.rexhep" "\0"
-            VALUE "FileDescription", "palimpsest" "\0"
+            VALUE "FileDescription", "ink_and_echo" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "palimpsest" "\0"
+            VALUE "InternalName", "ink_and_echo" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.rexhep. All rights reserved." "\0"
-            VALUE "OriginalFilename", "palimpsest.exe" "\0"
-            VALUE "ProductName", "palimpsest" "\0"
+            VALUE "OriginalFilename", "ink_and_echo.exe" "\0"
+            VALUE "ProductName", "ink_and_echo" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

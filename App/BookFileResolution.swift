@@ -1,5 +1,5 @@
 import Foundation
-import PalimpsestCore
+import InkAndEchoCore
 
 /// Resolves on-disk URLs stored on a `Book` record, falling back to a
 /// sandbox-relative rebase when the absolute URL no longer points at a
@@ -16,7 +16,7 @@ import PalimpsestCore
 /// archive: …")` and the reader never loads.
 ///
 /// The rescue: if the stored URL doesn't exist, walk back from the
-/// `Palimpsest` directory name, take the trailing components, and rejoin
+/// `InkAndEcho` directory name, take the trailing components, and rejoin
 /// them onto the *current* Application Support root. The Books directory
 /// itself is preserved across reinstalls because Application Support
 /// persists with the data container; only the absolute prefix changed.
@@ -48,20 +48,20 @@ enum BookFileResolution {
         return rebaseToCurrentSandbox(stored)
     }
 
-    /// Reconstructs the URL by taking everything from `Palimpsest/` onward
+    /// Reconstructs the URL by taking everything from `InkAndEcho/` onward
     /// in the stored path and re-joining it to the current Application
     /// Support root. Returns `nil` if the file isn't there either.
     private static func rebaseToCurrentSandbox(_ stored: URL) -> URL? {
         let components = stored.pathComponents
-        guard let palimpsestIdx = components.firstIndex(of: "Palimpsest") else { return nil }
-        let suffix = components[(palimpsestIdx + 1)...]  // Books, <UUID>, book.<ext>
+        guard let rootIdx = components.firstIndex(of: "InkAndEcho") else { return nil }
+        let suffix = components[(rootIdx + 1)...]  // Books, <UUID>, book.<ext>
         guard let appSupport = try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: false
         ) else { return nil }
-        var rebased = appSupport.appendingPathComponent("Palimpsest", isDirectory: true)
+        var rebased = appSupport.appendingPathComponent("InkAndEcho", isDirectory: true)
         for component in suffix {
             rebased.append(component: component)
         }

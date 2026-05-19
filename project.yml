@@ -1,4 +1,4 @@
-name: Palimpsest
+name: InkAndEcho
 
 options:
   bundleIdPrefix: com.rexhep
@@ -9,8 +9,8 @@ options:
   defaultConfig: Debug
 
 packages:
-  PalimpsestCore:
-    path: PalimpsestCore
+  InkAndEchoCore:
+    path: InkAndEchoCore
 
 # Project-wide settings — applied to every target unless overridden in
 # the target's own `settings.base`. These mirror the recommendations
@@ -24,7 +24,7 @@ settings:
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
 
 targets:
-  PalimpsestiOS:
+  InkAndEchoiOS:
     type: application
     platform: iOS
     deploymentTarget: "17.0"
@@ -33,10 +33,10 @@ targets:
         excludes:
           - "Info.plist"
     dependencies:
-      - package: PalimpsestCore
-        product: PalimpsestCore
+      - package: InkAndEchoCore
+        product: InkAndEchoCore
     entitlements:
-      path: App/Palimpsest.entitlements
+      path: App/InkAndEcho.entitlements
       properties:
         # App Sandbox is implicit on iOS but explicit on Catalyst — App
         # Store rejects Catalyst uploads without it. Same set the
@@ -51,7 +51,7 @@ targets:
     info:
       path: App/InfoiOS.plist
       properties:
-        CFBundleDisplayName: Palimpsest
+        CFBundleDisplayName: "Ink and Echo"
         CFBundleShortVersionString: "0.1.1"
         CFBundleVersion: "3"
         LSRequiresIPhoneOS: true
@@ -76,8 +76,8 @@ targets:
           - audio
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.rexhep.Palimpsest
-        PRODUCT_NAME: Palimpsest
+        PRODUCT_BUNDLE_IDENTIFIER: com.rexhep.InkAndEcho
+        PRODUCT_NAME: InkAndEcho
         MARKETING_VERSION: "0.1.1"
         CURRENT_PROJECT_VERSION: "3"
         SWIFT_VERSION: "6.0"
@@ -92,7 +92,7 @@ targets:
         # UIKit-on-AppKit. Gets us iBooks-quality `UIPageViewController.pageCurl`
         # on Mac for free — same renderer Apple Books on Mac uses. The
         # Calibre PDF→EPUB path is no longer relevant (sandbox blocks it
-        # anyway), so the AppKit Palimpsest target's reason to exist is gone.
+        # anyway), so the AppKit Ink and Echo target's reason to exist is gone.
         SUPPORTS_MACCATALYST: YES
         # Same bundle ID across iOS + Catalyst so it's one product on App
         # Store Connect, not two.
@@ -102,10 +102,10 @@ targets:
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
 
 schemes:
-  PalimpsestiOS:
+  InkAndEchoiOS:
     build:
       targets:
-        PalimpsestiOS: all
+        InkAndEchoiOS: all
     run:
       config: Debug
     test:

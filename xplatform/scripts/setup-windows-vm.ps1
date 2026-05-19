@@ -1,4 +1,4 @@
-# Bootstrap a Windows 10/11 VM for building Palimpsest (Flutter Windows
+# Bootstrap a Windows 10/11 VM for building Ink and Echo (Flutter Windows
 # desktop). Idempotent. Run from an *elevated* PowerShell prompt inside
 # the VM (right-click PowerShell -> Run as administrator).
 #

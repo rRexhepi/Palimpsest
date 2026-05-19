@@ -45,7 +45,7 @@ class _ReaderHeaderMobile extends StatelessWidget {
   final VoidCallback onBack;
   final VoidCallback onChapters;
   final VoidCallback onOverflow;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _ReaderHeaderMobile({
     required this.title,
     required this.onBack,
@@ -102,7 +102,7 @@ class _ReaderHeaderMobile extends StatelessWidget {
 class _ReaderHeaderDesktop extends StatelessWidget {
   final String title;
   final VoidCallback onOverflow;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _ReaderHeaderDesktop({
     required this.title,
     required this.onOverflow,
@@ -147,7 +147,7 @@ class _ReaderHeaderDesktop extends StatelessWidget {
 
 class _CircleHeaderBtn extends StatelessWidget {
   final Widget icon;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   final VoidCallback onTap;
   const _CircleHeaderBtn({
     required this.icon,

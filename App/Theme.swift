@@ -1,5 +1,5 @@
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 #if canImport(AppKit)
 import AppKit

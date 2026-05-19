@@ -1,10 +1,10 @@
 import 'package:flutter/services.dart';
 
-/// Dart wrapper for the `palimpsest/native_decoder` MethodChannel
+/// Dart wrapper for the `inkandecho/native_decoder` MethodChannel
 /// implemented in `android/.../NativeAudioDecoder.kt`. The slot the
 /// platform-agnostic `FfmpegRunner` skeleton plugs in on Android.
 class AndroidNativeDecoder {
-  static const _channel = MethodChannel('palimpsest/native_decoder');
+  static const _channel = MethodChannel('inkandecho/native_decoder');
 
   /// Decode (a range of) [sourcePath] into a 16-bit signed-little-endian
   /// WAV at [outputPath], downmixed to [channels] and resampled to

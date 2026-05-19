@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 /// are the brand. Saddle accent (#8B5A2B light / #C99A6A dark), parchment
 /// canvas (#F4EFE6 light / #1B1815 dark). Adaptive light + dark pairs for
 /// every token.
-class PalimpsestColors {
+class InkAndEchoColors {
   final Color canvas;
   final Color canvasCool;
   final Color canvasDeep;
@@ -17,7 +17,7 @@ class PalimpsestColors {
   final Color accentDeep;
   final Color onAccent;
 
-  const PalimpsestColors({
+  const InkAndEchoColors({
     required this.canvas,
     required this.canvasCool,
     required this.canvasDeep,
@@ -31,7 +31,7 @@ class PalimpsestColors {
     required this.onAccent,
   });
 
-  static const light = PalimpsestColors(
+  static const light = InkAndEchoColors(
     canvas: Color.fromARGB(255, 244, 239, 230),
     canvasCool: Color.fromARGB(255, 237, 232, 221),
     canvasDeep: Color.fromARGB(255, 226, 219, 203),
@@ -45,7 +45,7 @@ class PalimpsestColors {
     onAccent: Color.fromARGB(255, 251, 247, 238),
   );
 
-  static const dark = PalimpsestColors(
+  static const dark = InkAndEchoColors(
     canvas: Color.fromARGB(255, 27, 24, 21),
     canvasCool: Color.fromARGB(255, 21, 18, 15),
     canvasDeep: Color.fromARGB(255, 14, 12, 10),
@@ -60,12 +60,12 @@ class PalimpsestColors {
   );
 }
 
-extension PalimpsestThemeExt on BuildContext {
-  PalimpsestColors get colors {
+extension InkAndEchoThemeExt on BuildContext {
+  InkAndEchoColors get colors {
     final brightness = Theme.of(this).brightness;
     return brightness == Brightness.dark
-        ? PalimpsestColors.dark
-        : PalimpsestColors.light;
+        ? InkAndEchoColors.dark
+        : InkAndEchoColors.light;
   }
 }
 
@@ -76,8 +76,8 @@ const _bodySerifFallback = ['Charter', 'Iowan Old Style', 'Georgia', 'serif'];
 
 ThemeData buildTheme(Brightness brightness) {
   final c = brightness == Brightness.dark
-      ? PalimpsestColors.dark
-      : PalimpsestColors.light;
+      ? InkAndEchoColors.dark
+      : InkAndEchoColors.light;
   final base = brightness == Brightness.dark
       ? ThemeData.dark(useMaterial3: true)
       : ThemeData.light(useMaterial3: true);

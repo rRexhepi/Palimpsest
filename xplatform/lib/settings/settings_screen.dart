@@ -189,7 +189,7 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           const AppSectionHeader('About'),
           const AppListTile(
-            title: Text('Palimpsest'),
+            title: Text('Ink and Echo'),
             subtitle: Text(
                 'Audiobook + ebook sync reader. Cross-platform port from the Apple build.'),
           ),
@@ -202,7 +202,7 @@ class SettingsScreen extends StatelessWidget {
 class _HighlightSwatchRow extends StatelessWidget {
   final HighlightColor selected;
   final ValueChanged<HighlightColor> onChanged;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
 
   const _HighlightSwatchRow({
     required this.selected,

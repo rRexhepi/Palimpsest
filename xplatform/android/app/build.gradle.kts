@@ -18,7 +18,7 @@ val keyProps = Properties().apply {
 }
 
 android {
-    namespace = "com.rexhep.palimpsest"
+    namespace = "com.rexhep.inkandecho"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -32,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.rexhep.palimpsest"
+        applicationId = "com.rexhep.inkandecho"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

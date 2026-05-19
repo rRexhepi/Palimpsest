@@ -22,9 +22,9 @@ class FfmpegResult {
 /// MediaCodec are first-party APIs available since API 16 that decode
 /// every audio format the system knows. On Windows / Linux / macOS we
 /// shell out to a system-installed `ffmpeg` / `ffprobe` on PATH (or
-/// whatever `PALIMPSEST_FFMPEG` / `PALIMPSEST_FFPROBE` env vars point
+/// whatever `INK_AND_ECHO_FFMPEG` / `INK_AND_ECHO_FFPROBE` env vars point
 /// at). The Apple iOS / macOS app isn't a Flutter target — it lives in
-/// `App/` + `PalimpsestCore/` and uses WhisperKit + AVFoundation, no
+/// `App/` + `InkAndEchoCore/` and uses WhisperKit + AVFoundation, no
 /// ffmpeg involved.
 class FfmpegRunner {
   static final FfmpegRunner instance = FfmpegRunner._();
@@ -143,9 +143,9 @@ class FfmpegRunner {
   }
 
   String get _ffmpegBin =>
-      Platform.environment['PALIMPSEST_FFMPEG'] ?? 'ffmpeg';
+      Platform.environment['INK_AND_ECHO_FFMPEG'] ?? 'ffmpeg';
   String get _ffprobeBin =>
-      Platform.environment['PALIMPSEST_FFPROBE'] ?? 'ffprobe';
+      Platform.environment['INK_AND_ECHO_FFPROBE'] ?? 'ffprobe';
 
   Future<FfmpegResult> _runHostBinary(String exe, List<String> args) async {
     try {
@@ -157,7 +157,7 @@ class FfmpegRunner {
         127,
         'Failed to launch "$exe": ${e.message}. '
         'Install ffmpeg/ffprobe and ensure they are on PATH, or set '
-        'PALIMPSEST_FFMPEG / PALIMPSEST_FFPROBE.',
+        'INK_AND_ECHO_FFMPEG / INK_AND_ECHO_FFPROBE.',
       );
     }
   }

@@ -146,7 +146,7 @@ class _DesktopHeader extends StatelessWidget implements PreferredSizeWidget {
 
 class _CircleIcon extends StatelessWidget {
   final AppHeaderAction action;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _CircleIcon({required this.action, required this.colors});
 
   @override

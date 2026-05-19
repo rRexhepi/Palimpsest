@@ -142,7 +142,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget build(BuildContext context) {
     return AppScaffold(
       header: AppHeader(
-        title: 'Palimpsest',
+        title: 'Ink and Echo',
         leading: AppHeaderAction(
           icon: Icons.settings_outlined,
           onTap: _openSettings,

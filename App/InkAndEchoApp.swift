@@ -1,10 +1,10 @@
 import SwiftUI
 import SwiftData
 import UIKit
-import PalimpsestCore
+import InkAndEchoCore
 
 @main
-struct PalimpsestApp: App {
+struct InkAndEchoApp: App {
     @AppStorage(AppSettings.themeKey) private var themeRaw: String = ThemeChoice.system.rawValue
 
     private var theme: ThemeChoice {
@@ -12,7 +12,7 @@ struct PalimpsestApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Palimpsest") {
+        WindowGroup("Ink and Echo") {
             LibraryView()
                 .onAppear { applyTheme(theme) }
                 .onChange(of: themeRaw) { _, newRaw in

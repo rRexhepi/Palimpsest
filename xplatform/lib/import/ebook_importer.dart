@@ -34,7 +34,7 @@ abstract class EBookImporter {
   Future<ImportedBook> importBook(File file);
 }
 
-/// Pure-Dart port of `EPUBImporter` from PalimpsestCore/Import/EBookImporter.swift.
+/// Pure-Dart port of `EPUBImporter` from InkAndEchoCore/Import/EBookImporter.swift.
 /// Parses an EPUB 2 or EPUB 3 archive into the same shape the Apple build
 /// produces, so an `alignment.json` from either platform aligns the same
 /// ebook to the same `segmentId`s.

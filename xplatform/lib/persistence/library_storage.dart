@@ -9,7 +9,7 @@ import '../alignment/alignment_types.dart';
 /// `Books/<id>/book.epub`, `book.json` (metadata + segments),
 /// `audiobook.<ext>` (optional), `alignment.json` (optional, AlignmentMap),
 /// `cover` (optional bytes). Mirrors the Apple build's layout under
-/// `~/Library/Application Support/Palimpsest/Books/...` so a future sync
+/// `~/Library/Application Support/InkAndEcho/Books/...` so a future sync
 /// feature can ship without a migration.
 class StoredBook {
   final String id;

@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
-import PalimpsestCore
+import InkAndEchoCore
 
 struct LibraryView: View {
     @Environment(\.modelContext) private var modelContext
@@ -11,8 +11,8 @@ struct LibraryView: View {
     @State private var importing = false
     @State private var importError: String?
     @State private var showSettings = false
-    @AppStorage("palimpsest.lastOpenedBookID") private var lastOpenedBookID: String = ""
-    @AppStorage("palimpsest.hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
+    @AppStorage("inkandecho.lastOpenedBookID") private var lastOpenedBookID: String = ""
+    @AppStorage("inkandecho.hasCompletedOnboarding") private var hasCompletedOnboarding: Bool = false
 
     var body: some View {
         rootLayout
@@ -275,7 +275,7 @@ private struct LibraryEmptyState: View {
                     .font(.system(size: 24, design: .serif))
                     .fontWeight(.semibold)
                     .foregroundStyle(Theme.ink)
-                Text("Add an ebook and its audiobook. Palimpsest will transcribe the audio on this device and align it to the text. No upload, no account.")
+                Text("Add an ebook and its audiobook. Ink and Echo will transcribe the audio on this device and align it to the text. No upload, no account.")
                     .font(.system(size: 15, design: .serif))
                     .foregroundStyle(Theme.inkSoft)
                     .multilineTextAlignment(.center)

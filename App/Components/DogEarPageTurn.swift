@@ -1,5 +1,5 @@
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 /// Horizontal page-turn overlay with a small dog-ear corner peel. The
 /// dominant motion is a vertical-fold horizontal sweep — the lifted leaf

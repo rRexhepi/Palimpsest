@@ -1,6 +1,6 @@
 #!/usr/bin/env swift
 
-// Generates the Palimpsest macOS app icon at all 10 required sizes.
+// Generates the Ink and Echo macOS app icon at all 10 required sizes.
 // Design (Claude Design "Monogram" direction — the one you locked after
 // iterating on placement): a single sharp uppercase serif "P" in solid ink,
 // vertically centered, with a saddle-brown horizontal rule beneath it

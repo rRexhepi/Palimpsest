@@ -1,6 +1,6 @@
-# Palimpsest — cross-platform Flutter port
+# Ink and Echo — cross-platform Flutter port
 
-Flutter target shell for Palimpsest. iOS is the reference surface (Swift app
+Flutter target shell for Ink and Echo. iOS is the reference surface (Swift app
 lives in the parent directory); this tree carries Android, Windows, and Linux.
 
 ## Targets
@@ -11,7 +11,7 @@ lives in the parent directory); this tree carries Android, Windows, and Linux.
 | Windows  | working | just_audio_media_kit (libmpv), system ffmpeg, sherpa_onnx (CPU) |
 | Linux    | working | just_audio_media_kit (libmpv), system ffmpeg, sherpa_onnx (CPU) |
 
-The iOS build lives in `../App` / `../Palimpsest.xcodeproj` and is not part
+The iOS build lives in `../App` / `../InkAndEcho.xcodeproj` and is not part
 of this Flutter tree.
 
 ## Desktop prerequisites
@@ -27,8 +27,8 @@ through `ffmpeg_kit_flutter`). Install both before running:
 If the binaries aren't on `PATH`, point at them with environment vars:
 
 ```
-export PALIMPSEST_FFMPEG=/opt/ffmpeg/bin/ffmpeg
-export PALIMPSEST_FFPROBE=/opt/ffmpeg/bin/ffprobe
+export INK_AND_ECHO_FFMPEG=/opt/ffmpeg/bin/ffmpeg
+export INK_AND_ECHO_FFPROBE=/opt/ffmpeg/bin/ffprobe
 ```
 
 Linux also needs libmpv at runtime (media_kit_libs_linux pulls in the build
@@ -60,7 +60,7 @@ import on Windows / Linux:
 If `ebook-convert` isn't on `PATH`, point at it explicitly:
 
 ```
-export PALIMPSEST_EBOOK_CONVERT=/opt/calibre/ebook-convert
+export INK_AND_ECHO_EBOOK_CONVERT=/opt/calibre/ebook-convert
 ```
 
 MOBI is parsed by the bundled pure-Dart importer
@@ -80,13 +80,13 @@ flutter build linux
 ## Packaging
 
 Windows: `scripts\package-windows.ps1` builds the release and produces
-`dist\palimpsest-<version>-windows-x64.exe` via Inno Setup (`winget install
+`dist\ink_and_echo-<version>-windows-x64.exe` via Inno Setup (`winget install
 JRSoftware.InnoSetup`). Version is read from `pubspec.yaml`; override with
 `-Version 1.2.0`.
 
 ## Layout
 
-- `lib/audio/` — `PalimpsestAudioPlayer`. Mobile `audio_session` and
+- `lib/audio/` — `InkAndEchoAudioPlayer`. Mobile `audio_session` and
   `just_audio_background` init are gated behind
   `Platform.isAndroid || Platform.isIOS`.
 - `lib/whisper/` — `WhisperTranscriber` plus `FfmpegRunner` (dispatches to
@@ -125,13 +125,13 @@ bug on this combo.
 brew install lima                                    # one-time
 limactl start --name=palimp --vm-type=vz --tty=false template://ubuntu-24.04 \
   --cpus 4 --memory 8 --disk 40
-limactl shell palimp -- bash $HOME/Projects/Palimpsest/xplatform/scripts/setup-linux-vm.sh
+limactl shell palimp -- bash $HOME/Projects/InkAndEcho/xplatform/scripts/setup-linux-vm.sh
 
 # Lima mounts $HOME read-only. Copy the source into the VM's writable
 # disk before running pub get / build:
 limactl shell palimp -- bash -lc '
   rsync -a --delete --exclude=build --exclude=.dart_tool \
-    $HOME/Projects/Palimpsest/xplatform/ ~/xplatform/
+    $HOME/Projects/InkAndEcho/xplatform/ ~/xplatform/
   cd ~/xplatform
   ~/flutter/bin/flutter pub get
   ~/flutter/bin/flutter build linux --release
@@ -147,5 +147,5 @@ plugin; for clicking around the UI use a full Ubuntu Desktop VM in UTM.
 `just_audio` has no native Windows or Linux backend. The community
 `just_audio_media_kit` package transparently routes playback through
 [media_kit](https://pub.dev/packages/media_kit) (libmpv) on desktop targets
-while staying a no-op on Android and iOS, so the same `PalimpsestAudioPlayer`
+while staying a no-op on Android and iOS, so the same `InkAndEchoAudioPlayer`
 runs everywhere.

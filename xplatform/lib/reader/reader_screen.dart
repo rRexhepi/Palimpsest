@@ -99,7 +99,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // back to a global page index in O(1).
   final List<int> _segPageOffsets = [];
 
-  final _player = PalimpsestAudioPlayer();
+  final _player = InkAndEchoAudioPlayer();
   late final AnnotationStore _annotations;
   AlignmentMap? _alignment;
   bool _aligning = false;

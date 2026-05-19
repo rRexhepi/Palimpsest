@@ -1,5 +1,5 @@
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 /// Modal sheet listing every annotation (highlight / bookmark / note) on
 /// the current book, sorted in reading order. Tapping a row jumps the

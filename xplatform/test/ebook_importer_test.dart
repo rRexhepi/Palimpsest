@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:palimpsest/import/ebook_importer.dart';
+import 'package:ink_and_echo/import/ebook_importer.dart';
 
 void main() {
   group('EPUBImporter against Crime and Punishment fixture', () {

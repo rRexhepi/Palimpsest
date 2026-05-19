@@ -109,13 +109,13 @@ class LibraryStore extends ChangeNotifier {
     try {
       tmpDir = await Directory.systemTemp.createTemp('palimp_calibre_');
       final tmpEpub = File('${tmpDir.path}/converted.epub');
-      final exe = Platform.environment['PALIMPSEST_EBOOK_CONVERT'] ??
+      final exe = Platform.environment['INK_AND_ECHO_EBOOK_CONVERT'] ??
           (Platform.isWindows ? 'ebook-convert.exe' : 'ebook-convert');
       final proc = await Process.run(exe, [source.path, tmpEpub.path]);
       if (proc.exitCode != 0 || !tmpEpub.existsSync()) {
         _lastError =
             '$label conversion failed. Install Calibre and ensure '
-            '`ebook-convert` is on PATH (or set PALIMPSEST_EBOOK_CONVERT).'
+            '`ebook-convert` is on PATH (or set INK_AND_ECHO_EBOOK_CONVERT).'
             '\n${proc.stderr}';
         return null;
       }
@@ -127,7 +127,7 @@ class LibraryStore extends ChangeNotifier {
       _lastError =
           '$label conversion failed: ${e.message}. '
           'Install Calibre and ensure `ebook-convert` is on PATH '
-          '(or set PALIMPSEST_EBOOK_CONVERT).';
+          '(or set INK_AND_ECHO_EBOOK_CONVERT).';
       return null;
     } catch (e) {
       _lastError = '$label conversion failed: $e';
@@ -378,7 +378,7 @@ class LibraryStore extends ChangeNotifier {
     if (_foregroundInitialized) return;
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
-        channelId: 'com.rexhep.palimpsest.transcription',
+        channelId: 'com.rexhep.inkandecho.transcription',
         channelName: 'Audiobook transcription',
         channelDescription:
             'Progress for the audiobook alignment running in background.',

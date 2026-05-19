@@ -1,5 +1,5 @@
 import SwiftUI
-import PalimpsestCore
+import InkAndEchoCore
 
 struct AudioBarView: View {
     let engine: AudioEngine

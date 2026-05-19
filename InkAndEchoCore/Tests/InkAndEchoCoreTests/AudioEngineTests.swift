@@ -1,5 +1,5 @@
 import Testing
-@testable import PalimpsestCore
+@testable import InkAndEchoCore
 
 @MainActor
 @Suite("AudioEngine")

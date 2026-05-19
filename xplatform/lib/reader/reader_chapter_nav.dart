@@ -228,7 +228,7 @@ class _CollapsedRail extends StatelessWidget {
   final VoidCallback onToggleExpand;
   final VoidCallback onSettings;
   final VoidCallback onBackToLibrary;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _CollapsedRail({
     required this.currentTab,
     required this.onTab,
@@ -296,7 +296,7 @@ class _RailButton extends StatelessWidget {
   final IconData icon;
   final bool isSelected;
   final VoidCallback onTap;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _RailButton({
     required this.icon,
     required this.isSelected,
@@ -340,7 +340,7 @@ class _ExpandedSidebar extends StatelessWidget {
   final ValueChanged<int> onPickChapter;
   final ValueChanged<Annotation> onJumpToAnnotation;
   final VoidCallback onCollapse;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
 
   const _ExpandedSidebar({
     required this.book,
@@ -457,7 +457,7 @@ class _ExpandedSidebar extends StatelessWidget {
 class _SidebarTabBar extends StatelessWidget {
   final ReaderSidebarTab current;
   final ValueChanged<ReaderSidebarTab> onTab;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _SidebarTabBar({
     required this.current,
     required this.onTab,
@@ -519,7 +519,7 @@ class _ChapterList extends StatelessWidget {
   final StoredBook book;
   final int currentSegmentIndex;
   final ValueChanged<int> onPickChapter;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _ChapterList({
     required this.book,
     required this.currentSegmentIndex,
@@ -593,7 +593,7 @@ class _AnnotationList extends StatelessWidget {
   final StoredBook book;
   final ValueChanged<Annotation> onJumpTo;
   final String emptyLabel;
-  final PalimpsestColors colors;
+  final InkAndEchoColors colors;
   const _AnnotationList({
     required this.annotations,
     required this.book,
