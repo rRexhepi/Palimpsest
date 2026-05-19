@@ -66,12 +66,13 @@ targets:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        # iPad multitasking requires all four. Rejecting upload otherwise.
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
-          - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
+        # Disable Slide Over / Split View. Re-enable (and add
+        # PortraitUpsideDown on iPad to pass review) if users ask.
+        UIRequiresFullScreen: true
         UIBackgroundModes:
           - audio
         # App only uses Apple-provided TLS via URLSession; exempt under
