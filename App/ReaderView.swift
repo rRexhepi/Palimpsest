@@ -18,14 +18,15 @@ struct ReaderView: View {
     @State var attachError: String?
 
     @State var alignmentMap: AlignmentMap?
-    @State var alignmentRunning = false
-    @State var alignmentStage: AlignmentStage = .aligning
-    @State var alignmentError: String?
-    /// Banner message shown briefly after alignment finishes — success
-    /// count or empty-result note. Without it the fullscreen dismisses
-    /// and the reader looks unchanged, which made users think alignment
-    /// silently failed.
-    @State var alignmentToast: String?
+    /// Alignment progress + completion banner are sourced from the
+    /// app-level `AlignmentCoordinator`. Going `back` while alignment is
+    /// running pops this view but the coordinator keeps the job alive.
+    @Environment(AlignmentCoordinator.self) var alignment
+
+    var alignmentRunning: Bool { alignment.isRunning(for: book.id) }
+    var alignmentStage: AlignmentStage { alignment.stage ?? .aligning }
+    var alignmentToast: String? { alignmentRunning ? nil : alignment.toast }
+    var alignmentError: String? { alignment.error }
 
     @State var noteAnchor: ParagraphAnchor?
     @State var noteEditingExisting: Annotation?
@@ -60,6 +61,10 @@ struct ReaderView: View {
     @State var iosShowChapterSheet: Bool = false
     @State var iosShowAudioSheet: Bool = false
     @State var iosShowSettings: Bool = false
+    /// Confirmation surfaced when the back button is tapped while
+    /// alignment is running — the job will continue in the background
+    /// either way, but the prompt is the only place the user learns that.
+    @State var iosShowLeaveAlignmentConfirm: Bool = false
     @AppStorage(AppSettings.swipeToFlipEnabledKey) var swipeToFlipEnabled: Bool = AppSettings.swipeToFlipDefault
     @State var iosDragProgress: Double = 0
     @State var iosDragDirection: DogEarPageTurn.Direction = .forward
@@ -113,6 +118,14 @@ struct ReaderView: View {
         .onChange(of: currentPageIndex) { _, _ in
             saveProgressIfNeeded(force: true)
         }
+        .onChange(of: alignment.lastFinishedBookID) { _, finished in
+            // Coordinator just finished a job for THIS book — reload the
+            // alignment map from disk so anchors light up immediately.
+            // Skip otherwise so jobs running for a different book don't
+            // clobber our state.
+            guard finished == book.id else { return }
+            reloadAlignmentAfterCompletion()
+        }
         .onDisappear {
             saveProgressIfNeeded(force: true)
         }
@@ -135,9 +148,9 @@ struct ReaderView: View {
         }
         .alert("Alignment failed", isPresented: Binding(
             get: { alignmentError != nil },
-            set: { if !$0 { alignmentError = nil } }
+            set: { if !$0 { alignment.dismissError() } }
         )) {
-            Button("OK", role: .cancel) { alignmentError = nil }
+            Button("OK", role: .cancel) { alignment.dismissError() }
         } message: {
             Text(alignmentError ?? "")
         }
@@ -388,7 +401,7 @@ struct ReaderView: View {
             if book.audiobookFileURL != nil {
                 AudioBarView(
                     engine: engine,
-                    onAlign: { Task { await runAlignment() } },
+                    onAlign: { runAlignment() },
                     alignmentEnabled: !alignmentRunning,
                     alignmentExists: alignmentMap != nil
                 )
@@ -1588,7 +1601,7 @@ struct ReaderView: View {
                 .lineLimit(2)
             Spacer(minLength: 8)
             Button {
-                alignmentToast = nil
+                alignment.acknowledgeFinished()
             } label: {
                 Image(systemName: "xmark")
                     .font(.caption)
@@ -1900,35 +1913,22 @@ struct ReaderView: View {
 
     // MARK: - Alignment
 
-    func runAlignment() async {
-        alignmentRunning = true
-        alignmentStage = .loadingModel(model: "preparing")
-        defer { alignmentRunning = false }
+    /// Hand off to the app-level coordinator so the job survives popping
+    /// this view off the navigation stack. The completion bookkeeping
+    /// (banner, error alert, alignmentMap reload) is driven by the
+    /// `.onChange(of: alignment.lastFinishedBookID)` modifier in `body`.
+    func runAlignment() {
+        alignment.start(book: book, modelContext: modelContext)
+    }
+
+    /// Reloads the on-disk alignment map after the coordinator signals
+    /// completion. The coordinator runs on a single shared Task, so this
+    /// is the only spot we re-read the JSON.
+    func reloadAlignmentAfterCompletion() {
         let service = AlignmentService(modelContext: modelContext)
-        do {
-            try await service.runAlignment(for: book) { stage in
-                alignmentStage = stage
-            }
-            let map = service.loadAlignmentMap(for: book)
+        if let map = service.loadAlignmentMap(for: book) {
             alignmentMap = map
             rebuildAnchorIndex()
-            // Visible completion. Distinguishes a real success from a
-            // 0-anchor outcome (audio/text mismatch), since "Play from
-            // here" silently does nothing without anchors and that read
-            // as "alignment did nothing" to users.
-            let count = map?.words.count ?? 0
-            if count == 0 {
-                alignmentToast = "Alignment finished but no anchors landed. The audiobook may not match this EPUB."
-            } else {
-                alignmentToast = "Alignment complete · \(count) paragraph anchors synced"
-            }
-            // Clear after 4 seconds so the reader returns to its normal chrome.
-            Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 4_000_000_000)
-                alignmentToast = nil
-            }
-        } catch {
-            alignmentError = error.localizedDescription
         }
     }
 

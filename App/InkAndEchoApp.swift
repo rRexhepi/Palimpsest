@@ -6,6 +6,10 @@ import InkAndEchoCore
 @main
 struct InkAndEchoApp: App {
     @AppStorage(AppSettings.themeKey) private var themeRaw: String = ThemeChoice.system.rawValue
+    /// One alignment job per app session. Outlives any single `ReaderView`
+    /// so backing out of a book mid-alignment doesn't cancel the work or
+    /// hide its progress.
+    @State private var alignment = AlignmentCoordinator()
 
     private var theme: ThemeChoice {
         ThemeChoice(rawValue: themeRaw) ?? .system
@@ -14,6 +18,7 @@ struct InkAndEchoApp: App {
     var body: some Scene {
         WindowGroup("Ink and Echo") {
             LibraryView()
+                .environment(alignment as AlignmentCoordinator?)
                 .onAppear { applyTheme(theme) }
                 .onChange(of: themeRaw) { _, newRaw in
                     let newChoice = ThemeChoice(rawValue: newRaw) ?? .system

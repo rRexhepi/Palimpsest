@@ -185,10 +185,17 @@ struct LibraryView: View {
 
 private struct BookCard: View {
     let book: Book
+    @Environment(AlignmentCoordinator.self) private var alignment
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             cover
+                .overlay(alignment: .bottomLeading) {
+                    if alignment.isRunning(for: book.id) {
+                        aligningBadge
+                            .padding(8)
+                    }
+                }
             VStack(alignment: .leading, spacing: 2) {
                 Text(book.title)
                     .font(.system(size: 14, design: .serif))
@@ -209,6 +216,23 @@ private struct BookCard: View {
                 }
             }
         }
+    }
+
+    /// Pill overlaid on the cover when the app-level alignment coordinator
+    /// has a job in flight for this book. Tapping the row still navigates
+    /// into the reader where the running banner shows live progress.
+    private var aligningBadge: some View {
+        HStack(spacing: 6) {
+            ProgressView().controlSize(.mini).tint(Theme.onAccent)
+            Text("Aligning…")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Theme.onAccent)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Theme.accent.opacity(0.92))
+        .clipShape(Capsule())
+        .shadow(color: Color.black.opacity(0.25), radius: 4, x: 0, y: 2)
     }
 
     @ViewBuilder

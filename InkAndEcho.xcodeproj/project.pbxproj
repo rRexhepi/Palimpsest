@@ -18,6 +18,7 @@
 		879B357CC8C9D0EB9E7E077E /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A9DFB6DC24420D6E9F7D75B /* LibraryView.swift */; };
 		A6E2A5C12483EA2C0C69D98F /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6795E880D72A9C9046D31CF3 /* Theme.swift */; };
 		ACC008E475C112CE24FCCF59 /* PageCurlReaderContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37A5A843C01544CD83F9B21F /* PageCurlReaderContainer.swift */; };
+		B477F2B07304E94D4E8E0E20 /* AlignmentCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1572B6E8AB476A5B2527608D /* AlignmentCoordinator.swift */; };
 		B56068FD4BE0B43660C64FDA /* ReaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C483244FFA8A3AF439FA53 /* ReaderView.swift */; };
 		B71DCBC65E976EFB410364FA /* ReaderView+iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97774731905DC84D1F3E986B /* ReaderView+iOS.swift */; };
 		BC5CFA84EFBFD6AFC91B790E /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9402BA1F7677CF7925C21474 /* ImportService.swift */; };
@@ -33,6 +34,7 @@
 /* Begin PBXFileReference section */
 		03A1AB50F8D3B4289C8EAEE6 /* PlatformImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformImage.swift; sourceTree = "<group>"; };
 		12A7C200EA73136ABF2B9E9F /* BookFileResolution.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookFileResolution.swift; sourceTree = "<group>"; };
+		1572B6E8AB476A5B2527608D /* AlignmentCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlignmentCoordinator.swift; sourceTree = "<group>"; };
 		172CE85348873DECD40D1E55 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		37A5A843C01544CD83F9B21F /* PageCurlReaderContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageCurlReaderContainer.swift; sourceTree = "<group>"; };
 		4074DBB1CFAB9DC9D10C6C0E /* InkAndEchoiOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = InkAndEchoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -100,6 +102,7 @@
 			isa = PBXGroup;
 			children = (
 				B493CF1AFDA2962C61048F71 /* Components */,
+				1572B6E8AB476A5B2527608D /* AlignmentCoordinator.swift */,
 				AFF009345723E68F5306F679 /* AlignmentService.swift */,
 				F3A872832608CF8CDE642DBB /* Assets.xcassets */,
 				6375515AC3F41DBA03C0DA29 /* AudioBarTouchView.swift */,
@@ -208,6 +211,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B477F2B07304E94D4E8E0E20 /* AlignmentCoordinator.swift in Sources */,
 				E30334F8FAF90446B2260AD8 /* AlignmentService.swift in Sources */,
 				7692D7E86E62D225F5AC52B2 /* AnnotationsListSheet.swift in Sources */,
 				13B13199ABFD53ED945DD0E3 /* AudioBarTouchView.swift in Sources */,

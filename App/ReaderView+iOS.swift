@@ -300,7 +300,7 @@ extension ReaderView {
             AudioBarTouchView(
                 engine: engine,
                 compact: false,
-                onAlign: alignmentRunning ? nil : { Task { await runAlignment() } },
+                onAlign: alignmentRunning ? nil : { runAlignment() },
                 alignmentExists: alignmentMap != nil,
                 onRequestExpand: nil
             )
@@ -348,6 +348,20 @@ extension ReaderView {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+        .confirmationDialog(
+            "Alignment in progress",
+            isPresented: $iosShowLeaveAlignmentConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Leave anyway") { iosDismiss() }
+            Button("Cancel alignment", role: .destructive) {
+                alignment.cancel()
+                iosDismiss()
+            }
+            Button("Stay", role: .cancel) { }
+        } message: {
+            Text("WhisperKit is still transcribing this book. Leaving keeps the job running in the background — the library row will show progress.")
+        }
     }
 
     /// Right-edge swipe-to-turn gesture cue. Slowly fades in/out so it
@@ -390,7 +404,7 @@ extension ReaderView {
                 }
                 if book.audiobookFileURL != nil {
                     Button {
-                        Task { await runAlignment() }
+                        runAlignment()
                     } label: {
                         Label(alignmentMap != nil ? "Re-align audio" : "Align audio",
                               systemImage: "waveform.path")
@@ -427,8 +441,18 @@ extension ReaderView {
     /// Pop the navigation stack back to the library list. Bound to the
     /// chevron-left in the phone header since hiding the navbar disables
     /// the system back-swipe gesture.
+    ///
+    /// If alignment is running for this book, surface a confirmation
+    /// first — the job survives popping the view (the coordinator owns
+    /// the Task), but the user has no way to know that without being
+    /// told. iPad's system back doesn't route through here; on iPad the
+    /// library row's "Aligning…" pill plays the same role.
     private func iosBackToLibrary() {
-        iosDismiss()
+        if alignmentRunning {
+            iosShowLeaveAlignmentConfirm = true
+        } else {
+            iosDismiss()
+        }
     }
 
     private func phoneHeaderButton(icon: String, action: @escaping () -> Void) -> some View {
@@ -546,7 +570,7 @@ extension ReaderView {
             AudioBarTouchView(
                 engine: engine,
                 compact: false,
-                onAlign: alignmentRunning ? nil : { Task { await runAlignment() } },
+                onAlign: alignmentRunning ? nil : { runAlignment() },
                 alignmentExists: alignmentMap != nil,
                 onRequestExpand: nil
             )
